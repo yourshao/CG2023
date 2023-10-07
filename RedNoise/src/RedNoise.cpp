@@ -20,6 +20,9 @@ void draw(DrawingWindow &window) {
 	}
 }
 
+
+
+
 void handleEvent(SDL_Event event, DrawingWindow &window) {
 	if (event.type == SDL_KEYDOWN) {
 		if (event.key.keysym.sym == SDLK_LEFT) std::cout << "LEFT" << std::endl;
@@ -32,9 +35,32 @@ void handleEvent(SDL_Event event, DrawingWindow &window) {
 	}
 }
 
+std::vector<float> interpolateSingleFloats(float from, float to, int numberOfValues){
+    std::vector<float> result;
+
+    float difference = ( to - from ) /( numberOfValues-1 )  ;
+    for (int a = 0 ;a < numberOfValues; a++){
+
+        result.push_back(from + a * difference);
+    }
+    return result;
+}
+
+
+
+
+
+
+
 int main(int argc, char *argv[]) {
 	DrawingWindow window = DrawingWindow(WIDTH, HEIGHT, false);
 	SDL_Event event;
+
+    std::vector<float> result;
+    result = interpolateSingleFloats(2.2, 8.5, 7);
+    for(size_t i=0; i<result.size(); i++) std::cout << result[i] << " ";
+    std::cout << std::endl;
+
 	while (true) {
 		// We MUST poll for events - otherwise the window will freeze !
 		if (window.pollForInputEvents(event)) handleEvent(event, window);
