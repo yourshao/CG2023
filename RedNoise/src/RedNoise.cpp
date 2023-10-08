@@ -4,6 +4,9 @@
 #include <fstream>
 #include <vector>
 #include <glm/glm.hpp>
+#include <CanvasPoint.h>
+#include <Colour.h>
+
 
 #define WIDTH 320
 #define HEIGHT 240
@@ -49,57 +52,69 @@ std::vector<glm::vec3> result (numberOfValues)  ;
 
 }
 
+void Drawanother(float fromX, float fromY, float toX, float toY, DrawingWindow &window){
+    float xDiff = toX - fromX;
+    float yDiff = toY - fromY;
+    float numberOfSteps = fmax(abs(xDiff), abs(yDiff));
+    float xStepSize =  xDiff/numberOfSteps;
+    float yStepSize =  yDiff/numberOfSteps;
+    for (float i = 0.0; i <= numberOfSteps; i++) {
+        float x = fromX + (xStepSize*i);
+        float y = fromY + (yStepSize*i);
+        uint32_t colour = (255 << 24) + (255 << 16) + (255 << 8) + 255;
+
+        window.setPixelColour(round(x), round(y), colour);
+    }
+}
+
+
+
+
+
 
 
 void draw(DrawingWindow &window) {
 	window.clearPixels();
 
-    glm::vec3 topLeft = {255, 0, 0};        // red
-    glm::vec3 topRight = {0, 0, 255};       // blue
-    glm::vec3 bottomRight = {0, 255, 0};    // green
-    glm::vec3 bottomLeft = {255, 255, 0};  //yellow
 
-    std::vector<glm::vec3> left = interpolateThreeElementValues(topLeft, bottomLeft, HEIGHT);
-    std::vector<glm::vec3> right = interpolateThreeElementValues(topRight, bottomRight, HEIGHT);
-
-    for (size_t y = 0; y < window.height; y++) {
-        // for grey spectrum
-//        std::vector<float> result;
-//        result = interpolateSingleFloats(0, 255, WIDTH);
-
-//for colour
-        glm::vec3 firstOne = left[y];
-        glm::vec3 lastOne = right[y];
-
-
-        std::vector<glm::vec3> resultHorizontal = interpolateThreeElementValues(firstOne, lastOne, WIDTH);
-
+//    CanvasPoint::CanvasPoint picture;
+//    int red;
+//    int green;
+//    int blue;
 //
-       for (size_t x = 0; x < window.width; x++) {
-//          //this is original red noise
-//			float red = rand() % 256;
-//			float green = 0.0;
-//			float blue = 0.0;
-//			uint32_t colour = (255 << 24) + (int(red) << 16) + (int(green) << 8) + int(blue);
-// make grey spectrum
-//            float red = 255-result.front();
-//            float green = 255-result.front();
-//            float blue = 255-result.front();
-//            result.erase(result.begin());
+//
+//
+//    for (size_t y = 0; y < window.height; y++) {
+//        // for grey spectrum
+////        std::vector<float> result;
+////        result = interpolateSingleFloats(0, 255, WIDTH);
+//       for (size_t x = 0; x < window.width; x++) {
+//
+//
+//           if (picture.brightness(x,y) ==1.0 ){
+//               red = 0;
+//               green = 0;
+//               blue = 0;
+//           }else{
+//               red =255;
+//               green = 255;
+//               blue =255;
+//           }
 //            uint32_t colour = (255 << 24) + (int(red) << 16) + (int(green) << 8) + int(blue);
-
-            float red = resultHorizontal[x].x;
-            float green = resultHorizontal[x].y;
-            float blue = resultHorizontal[x].z;
-
-            uint32_t colour = (255 << 24) + (int(red) << 16) + (int(green) << 8) + int(blue);
+//			window.setPixelColour(x, y, colour);
+//		}
+//	}
 
 
 
+    Drawanother(0.0, 0.0, WIDTH/2, HEIGHT/2,window);
+    Drawanother(WIDTH/3, HEIGHT/2, 2*WIDTH/3, HEIGHT/2,window);
+    Drawanother(WIDTH, 0.0,WIDTH/2, HEIGHT/2, window);
+    Drawanother(WIDTH/2, 0,WIDTH/2, HEIGHT, window );
 
-			window.setPixelColour(x, y, colour);
-		}
-	}
+
+
+
 }
 
 
@@ -125,21 +140,6 @@ void handleEvent(SDL_Event event, DrawingWindow &window) {
 int main(int argc, char *argv[]) {
 	DrawingWindow window = DrawingWindow(WIDTH, HEIGHT, false);
 	SDL_Event event;
-    // test for the interpolateSingleFloats() function
-//    std::vector<float> result;
-//    result = interpolateSingleFloats(2.2, 8.5, 7);
-//    for(size_t i=0; i<result.size(); i++) std::cout << result[i] << " ";
-//    std::cout << std::endl;
-//
-
-//for four colour
-//    std::vector<glm::vec3> result;
-//    glm::vec3 from = {1.0, 4.0, 9.2};
-//    glm::vec3 to = {4.0, 1.0, 9.8};
-//    result = interpolateThreeElementValues(from,to,4);
-//    for(size_t i=0; i< result.size(); i++) std::cout << result[i].x << result[i].y<<result[i].z;
-//    std::cout << std::endl;
-
 
 
 
