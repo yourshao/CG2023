@@ -64,5 +64,5 @@ $(BUILD_DIR)/%.o: $(SDW_DIR)%.cpp
 	$(COMPILER) $(COMPILER_OPTIONS) -c -o $@ $^ $(SDL_COMPILER_FLAGS) $(GLM_COMPILER_FLAGS)
 
 # Files to remove during clean
-clean:
+ clean:
 	rm $(BUILD_DIR)/*
