@@ -74,7 +74,6 @@ void draw(DrawingWindow &window) {
 
         std::vector<glm::vec3> resultHorizontal = interpolateThreeElementValues(firstOne, lastOne, WIDTH);
 
-
 //
        for (size_t x = 0; x < window.width; x++) {
 //          //this is original red noise
