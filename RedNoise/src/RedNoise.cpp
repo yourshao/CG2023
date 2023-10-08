@@ -40,7 +40,6 @@ std::vector<float> interpolateSingleFloats(float from, float to, int numberOfVal
 
     float difference = ( to - from ) /( numberOfValues-1 )  ;
     for (int a = 0 ;a < numberOfValues; a++){
-
         result.push_back(from + a * difference);
     }
     return result;
@@ -48,18 +47,22 @@ std::vector<float> interpolateSingleFloats(float from, float to, int numberOfVal
 
 
 
-
-
-
-
 int main(int argc, char *argv[]) {
 	DrawingWindow window = DrawingWindow(WIDTH, HEIGHT, false);
 	SDL_Event event;
 
-    std::vector<float> result;
-    result = interpolateSingleFloats(2.2, 8.5, 7);
-    for(size_t i=0; i<result.size(); i++) std::cout << result[i] << " ";
-    std::cout << std::endl;
+//    std::vector<float> result;
+//    result = interpolateSingleFloats(2.2, 8.5, 7);
+//    for(size_t i=0; i<result.size(); i++) std::cout << result[i] << " ";
+//    std::cout << std::endl;
+//
+
+
+
+
+
+
+
 
 	while (true) {
 		// We MUST poll for events - otherwise the window will freeze !
