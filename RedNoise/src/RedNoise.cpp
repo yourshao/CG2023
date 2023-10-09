@@ -6,6 +6,7 @@
 #include <glm/glm.hpp>
 #include <CanvasPoint.h>
 #include <Colour.h>
+#include <CanvasTriangle.h>
 
 
 #define WIDTH 320
@@ -21,7 +22,6 @@ std::vector<float> interpolateSingleFloats(float from, float to, int numberOfVal
     }
     return result;
 }
-
 
 std::vector<glm::vec3> interpolateThreeElementValues(glm::vec3 from, glm::vec3 to, int numberOfValues){
 std::vector<glm::vec3> result (numberOfValues)  ;
@@ -47,20 +47,19 @@ std::vector<glm::vec3> result (numberOfValues)  ;
         }
 
     }
-
     return result;
 
 }
 
-void Drawanother(float fromX, float fromY, float toX, float toY, DrawingWindow &window){
-    float xDiff = toX - fromX;
-    float yDiff = toY - fromY;
+void Drawanother(CanvasPoint from, CanvasPoint to, DrawingWindow &window){
+    float xDiff = to.x - from.x;
+    float yDiff = to.y - from.y;
     float numberOfSteps = fmax(abs(xDiff), abs(yDiff));
     float xStepSize =  xDiff/numberOfSteps;
     float yStepSize =  yDiff/numberOfSteps;
     for (float i = 0.0; i <= numberOfSteps; i++) {
-        float x = fromX + (xStepSize*i);
-        float y = fromY + (yStepSize*i);
+        float x = from.x + (xStepSize*i);
+        float y = from.y + (yStepSize*i);
         uint32_t colour = (255 << 24) + (255 << 16) + (255 << 8) + 255;
 
         window.setPixelColour(round(x), round(y), colour);
@@ -77,40 +76,19 @@ void draw(DrawingWindow &window) {
 	window.clearPixels();
 
 
-//    CanvasPoint::CanvasPoint picture;
-//    int red;
-//    int green;
-//    int blue;
-//
-//
-//
-//    for (size_t y = 0; y < window.height; y++) {
-//        // for grey spectrum
-////        std::vector<float> result;
-////        result = interpolateSingleFloats(0, 255, WIDTH);
-//       for (size_t x = 0; x < window.width; x++) {
-//
-//
-//           if (picture.brightness(x,y) ==1.0 ){
-//               red = 0;
-//               green = 0;
-//               blue = 0;
-//           }else{
-//               red =255;
-//               green = 255;
-//               blue =255;
-//           }
-//            uint32_t colour = (255 << 24) + (int(red) << 16) + (int(green) << 8) + int(blue);
-//			window.setPixelColour(x, y, colour);
-//		}
-//	}
+    CanvasPoint topLeft(0.0, 0.0);
+    CanvasPoint Middle(WIDTH/2, HEIGHT/2);
+    CanvasPoint topRight(WIDTH, 0.0);
+    CanvasPoint topMiddle(WIDTH/2, 0);
+    CanvasPoint underMiddle(WIDTH/2, HEIGHT);
+    CanvasPoint twoThirdsMiddle(2*WIDTH/3, HEIGHT/2);
+    CanvasPoint oneThirdMiddle(WIDTH/3, HEIGHT/2);
 
+    Drawanother(topLeft, Middle,window);
+    Drawanother(oneThirdMiddle, twoThirdsMiddle,window);
+    Drawanother(topRight, Middle, window);
+    Drawanother(topMiddle,underMiddle, window );
 
-
-    Drawanother(0.0, 0.0, WIDTH/2, HEIGHT/2,window);
-    Drawanother(WIDTH/3, HEIGHT/2, 2*WIDTH/3, HEIGHT/2,window);
-    Drawanother(WIDTH, 0.0,WIDTH/2, HEIGHT/2, window);
-    Drawanother(WIDTH/2, 0,WIDTH/2, HEIGHT, window );
 
 
 
@@ -141,8 +119,16 @@ int main(int argc, char *argv[]) {
 	DrawingWindow window = DrawingWindow(WIDTH, HEIGHT, false);
 	SDL_Event event;
 
+    CanvasTriangle oneTriangle;
 
+    for (int i = 0; i < 3; ++i) {
+        float yPoint = rand()%HEIGHT;
+        float xPoint = rand()%WIDTH;
+        CanvasPoint point(xPoint,yPoint);
+        oneTriangle.v1(point);
+    }
 
+    oneTriangle<<
 
 
 
