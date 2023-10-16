@@ -65,11 +65,30 @@ void Drawanother(CanvasPoint from, CanvasPoint to, DrawingWindow &window){
         window.setPixelColour(round(x), round(y), colour);
     }
 }
-void drawTriangle(CanvasPoint v0, CanvasPoint v1, CanvasPoint v2, DrawingWindow &window) {
-    Drawanother(v0, v1, window);
-    Drawanother(v1, v2, window);
-    Drawanother(v2, v0, window);
+void drawTriangle(const CanvasPoint &v0, const CanvasPoint &v1, const CanvasPoint &v2, DrawingWindow &window) {
+    // 找到三角形的最小和最大y坐标
+    int minY = std::min({v0.y, v1.y, v2.y});
+    int maxY = std::max({v0.y, v1.y, v2.y});
+
+    // 对每一行进行扫描
+    for (int y = minY; y <= maxY; ++y) {
+        // 找到当前行与三角形边的交点
+        float x01 = interpolate(v0.y, v1.y, v0.x, v1.x, y);
+        float x12 = interpolate(v1.y, v2.y, v1.x, v2.x, y);
+        float x20 = interpolate(v2.y, v0.y, v2.x, v0.x, y);
+
+        // 找到当前行的最小和最大x坐标
+        int minX = std::min({x01, x12, x20});
+        int maxX = std::max({x01, x12, x20});
+
+        // 在当前行的最小和最大x坐标之间填充颜色
+        for (int x = minX; x <= maxX; ++x) {
+            uint32_t colour = (255 << 24) + (255 << 16) + (255 << 8) + 255;
+            window.setPixelColour(x, y, colour);
+        }
+    }
 }
+
 
 
 void drawTriangles(DrawingWindow &window, const std::vector<CanvasTriangle> &triangles) {
