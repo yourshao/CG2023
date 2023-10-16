@@ -52,39 +52,15 @@ bool isPointInTriangle(int x, int y, float x0, float y0, float x1, float y1, flo
 }
 
 
-//void drawTriangle(CanvasTriangle triangle, DrawingWindow &window) {
-//    // 找到三角形的最小和最大y坐标
-//    int minY = std::min({triangle.v0().y, triangle.v1().y, triangle.v2().y});
-//    int maxY = std::max({triangle.v0().y, triangle.v1().y, triangle.v2().y});
-//
-//    // 对每一行进行扫描
-//    for (int y = minY; y <= maxY; ++y) {
-//        // 找到当前行与三角形边的交点
-//        float x01 = interpolate(triangle.v0().y, triangle.v0().x, triangle.v1().y, triangle.v1().x, y);
-//        float x12 = interpolate(triangle.v1().y, triangle.v1().x, triangle.v2().y, triangle.v2().x, y);
-//        float x20 = interpolate(triangle.v2().y, triangle.v2().x, triangle.v0().y, triangle.v0().x, y);
-//
-//        // 找到当前行的最小和最大x坐标
-//        int minX = std::min({static_cast<int>(x01), static_cast<int>(x12), static_cast<int>(x20)});
-//        int maxX = std::max({static_cast<int>(x01), static_cast<int>(x12), static_cast<int>(x20)});
-//
-//        // 对当前行的每个像素进行遍历
-//        for (int x = minX; x <= maxX; ++x) {
-//            // 检查像素是否在三角形内
-//            if (isPointInTriangle(x, y, triangle.v0().x, triangle.v0().y, triangle.v1().x, triangle.v1().y, triangle.v2().x, triangle.v2().y)) {
-//                uint32_t colour = (rand()%255 << 24) + (rand()%255 << 16) + (rand()%255 << 8) + rand()%255;
-//                window.setPixelColour(x, y, colour);
-//            }
-//        }
-//    }
-//}
-
-void drawTriangle(CanvasTriangle triangle, DrawingWindow &window) {
-    // 随机生成固定颜色
+uint32_t generateRandomColor() {
     uint8_t r = rand() % 256;
     uint8_t g = rand() % 256;
     uint8_t b = rand() % 256;
-    uint32_t colour = (255 << 24) + (r << 16) + (g << 8) + b;
+    return (255 << 24) + (r << 16) + (g << 8) + b;
+}
+
+// 在 drawTriangle 函数中添加颜色参数
+void drawTriangle(CanvasTriangle triangle, DrawingWindow &window, uint32_t color) {
 
     // 找到三角形的最小和最大y坐标
     int minY = std::min({triangle.v0().y, triangle.v1().y, triangle.v2().y});
@@ -105,18 +81,16 @@ void drawTriangle(CanvasTriangle triangle, DrawingWindow &window) {
         for (int x = minX; x <= maxX; ++x) {
             // 检查像素是否在三角形内
             if (isPointInTriangle(x, y, triangle.v0().x, triangle.v0().y, triangle.v1().x, triangle.v1().y, triangle.v2().x, triangle.v2().y)) {
-                window.setPixelColour(x, y, colour);
+                window.setPixelColour(x, y, color);
             }
         }
     }
 }
 
-
-
-void drawTriangles(DrawingWindow &window, std::vector<CanvasTriangle> &triangles) {
+void drawTriangles(DrawingWindow &window, std::vector<CanvasTriangle> &triangles, std::vector<uint32_t> &colors) {
     window.clearPixels();
-    for (CanvasTriangle &triangle : triangles) {
-        drawTriangle(triangle, window);
+    for (size_t i = 0; i < triangles.size(); ++i) {
+        drawTriangle(triangles[i], window, colors[i]);
     }
 }
 
@@ -126,7 +100,8 @@ CanvasPoint creatOnePoint() {
     return CanvasPoint(xPoint, yPoint);
 }
 
-void handleEvent(SDL_Event event, DrawingWindow &window, std::vector<CanvasTriangle> &triangles) {
+
+void handleEvent(SDL_Event event, DrawingWindow &window, std::vector<CanvasTriangle> &triangles, std::vector<uint32_t> &colors)  {
     if (event.type == SDL_KEYDOWN) {
         if (event.key.keysym.sym == SDLK_LEFT) std::cout << "LEFT" << std::endl;
         else if (event.key.keysym.sym == SDLK_RIGHT) std::cout << "RIGHT" << std::endl;
@@ -138,6 +113,8 @@ void handleEvent(SDL_Event event, DrawingWindow &window, std::vector<CanvasTrian
             CanvasPoint v1 = creatOnePoint();
             CanvasPoint v2 = creatOnePoint();
             triangles.push_back(CanvasTriangle(v0, v1, v2));
+            uint32_t color = generateRandomColor();
+            colors.push_back(color);
         }
     } else if (event.type == SDL_MOUSEBUTTONDOWN) {
         window.savePPM("output.ppm");
@@ -152,14 +129,14 @@ int main(int argc, char *argv[]) {
     SDL_Event event;
 
     std::vector<CanvasTriangle> triangles; // 存储生成的三角形
+    std::vector<uint32_t> colors;          // 存储生成的颜色
 
     while (true) {
-        // We MUST poll for events - otherwise the window will freeze!
-        if (window.pollForInputEvents(event)) handleEvent(event, window, triangles);
-        drawTriangles(window, triangles);
-        // Need to render the frame at the end, or nothing actually gets shown on the screen!
+        if (window.pollForInputEvents(event)) handleEvent(event, window, triangles, colors);
+        drawTriangles(window, triangles, colors);
         window.renderFrame();
     }
 
     return 0;
 }
+
