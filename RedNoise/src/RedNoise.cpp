@@ -11,46 +11,6 @@
 
 #define WIDTH 320
 #define HEIGHT 240
-
-//for grey spectrum
-
-std::vector<float> interpolateSingleFloats(float from, float to, int numberOfValues){
-    std::vector<float> result;
-    float difference = ( to - from ) /(numberOfValues-1)  ;
-    for (int a = 0 ;a < numberOfValues; a++){
-        result.push_back(from + a * difference);
-    }
-    return result;
-}
-
-std::vector<glm::vec3> interpolateThreeElementValues(glm::vec3 from, glm::vec3 to, int numberOfValues){
-std::vector<glm::vec3> result (numberOfValues)  ;
-    float oneFrom;
-    float oneTo;
-    for(int a = 0; a<3;a++) {
-        oneFrom = from[a];
-        oneTo = to[a];
-        std::vector<float> oneVectorResult = interpolateSingleFloats(oneFrom, oneTo, numberOfValues);
-
-        if (a == 0 ){
-            for(int x = 0; x< numberOfValues; x++){
-                result[x].x =oneVectorResult[x];
-            }
-        }else if (a == 1 ){
-            for(int x = 0; x< numberOfValues; x++){
-                result[x].y =oneVectorResult[x];
-            }
-        } else if (a == 2 ){
-            for(int x = 0; x< numberOfValues; x++){
-                result[x].z =oneVectorResult[x];
-            }
-        }
-
-    }
-    return result;
-
-}
-
 void Drawanother(CanvasPoint from, CanvasPoint to, DrawingWindow &window){
     float xDiff = to.x - from.x;
     float yDiff = to.y - from.y;
@@ -65,40 +25,101 @@ void Drawanother(CanvasPoint from, CanvasPoint to, DrawingWindow &window){
         window.setPixelColour(round(x), round(y), colour);
     }
 }
-void drawTriangle(const CanvasPoint &v0, const CanvasPoint &v1, const CanvasPoint &v2, DrawingWindow &window) {
+
+//for grey spectrum
+
+std::vector<float> interpolateSingleFloats(float from, float to, int numberOfValues){
+    std::vector<float> result;
+    float difference = (to - from) / (numberOfValues - 1);
+    for (int a = 0; a < numberOfValues; a++){
+        result.push_back(from + a * difference);
+    }
+    return result;
+}
+
+
+float interpolate(float y0, float x0, float y1, float x1, float y) {
+    return x0 + (x1 - x0) * (y - y0) / (y1 - y0);
+}
+
+// 检查点是否在三角形内
+bool isPointInTriangle(int x, int y, float x0, float y0, float x1, float y1, float x2, float y2) {
+    float d0 = (x - x0) * (y1 - y0) - (y - y0) * (x1 - x0);
+    float d1 = (x - x1) * (y2 - y1) - (y - y1) * (x2 - x1);
+    float d2 = (x - x2) * (y0 - y2) - (y - y2) * (x0 - x2);
+
+    return (d0 >= 0 && d1 >= 0 && d2 >= 0) || (d0 <= 0 && d1 <= 0 && d2 <= 0);
+}
+
+
+//void drawTriangle(CanvasTriangle triangle, DrawingWindow &window) {
+//    // 找到三角形的最小和最大y坐标
+//    int minY = std::min({triangle.v0().y, triangle.v1().y, triangle.v2().y});
+//    int maxY = std::max({triangle.v0().y, triangle.v1().y, triangle.v2().y});
+//
+//    // 对每一行进行扫描
+//    for (int y = minY; y <= maxY; ++y) {
+//        // 找到当前行与三角形边的交点
+//        float x01 = interpolate(triangle.v0().y, triangle.v0().x, triangle.v1().y, triangle.v1().x, y);
+//        float x12 = interpolate(triangle.v1().y, triangle.v1().x, triangle.v2().y, triangle.v2().x, y);
+//        float x20 = interpolate(triangle.v2().y, triangle.v2().x, triangle.v0().y, triangle.v0().x, y);
+//
+//        // 找到当前行的最小和最大x坐标
+//        int minX = std::min({static_cast<int>(x01), static_cast<int>(x12), static_cast<int>(x20)});
+//        int maxX = std::max({static_cast<int>(x01), static_cast<int>(x12), static_cast<int>(x20)});
+//
+//        // 对当前行的每个像素进行遍历
+//        for (int x = minX; x <= maxX; ++x) {
+//            // 检查像素是否在三角形内
+//            if (isPointInTriangle(x, y, triangle.v0().x, triangle.v0().y, triangle.v1().x, triangle.v1().y, triangle.v2().x, triangle.v2().y)) {
+//                uint32_t colour = (rand()%255 << 24) + (rand()%255 << 16) + (rand()%255 << 8) + rand()%255;
+//                window.setPixelColour(x, y, colour);
+//            }
+//        }
+//    }
+//}
+
+void drawTriangle(CanvasTriangle triangle, DrawingWindow &window) {
+    // 随机生成固定颜色
+    uint8_t r = rand() % 256;
+    uint8_t g = rand() % 256;
+    uint8_t b = rand() % 256;
+    uint32_t colour = (255 << 24) + (r << 16) + (g << 8) + b;
+
     // 找到三角形的最小和最大y坐标
-    int minY = std::min({v0.y, v1.y, v2.y});
-    int maxY = std::max({v0.y, v1.y, v2.y});
+    int minY = std::min({triangle.v0().y, triangle.v1().y, triangle.v2().y});
+    int maxY = std::max({triangle.v0().y, triangle.v1().y, triangle.v2().y});
 
     // 对每一行进行扫描
     for (int y = minY; y <= maxY; ++y) {
         // 找到当前行与三角形边的交点
-        float x01 = interpolate(v0.y, v1.y, v0.x, v1.x, y);
-        float x12 = interpolate(v1.y, v2.y, v1.x, v2.x, y);
-        float x20 = interpolate(v2.y, v0.y, v2.x, v0.x, y);
+        float x01 = interpolate(triangle.v0().y, triangle.v0().x, triangle.v1().y, triangle.v1().x, y);
+        float x12 = interpolate(triangle.v1().y, triangle.v1().x, triangle.v2().y, triangle.v2().x, y);
+        float x20 = interpolate(triangle.v2().y, triangle.v2().x, triangle.v0().y, triangle.v0().x, y);
 
         // 找到当前行的最小和最大x坐标
-        int minX = std::min({x01, x12, x20});
-        int maxX = std::max({x01, x12, x20});
+        int minX = std::min({static_cast<int>(x01), static_cast<int>(x12), static_cast<int>(x20)});
+        int maxX = std::max({static_cast<int>(x01), static_cast<int>(x12), static_cast<int>(x20)});
 
-        // 在当前行的最小和最大x坐标之间填充颜色
+        // 对当前行的每个像素进行遍历
         for (int x = minX; x <= maxX; ++x) {
-            uint32_t colour = (255 << 24) + (255 << 16) + (255 << 8) + 255;
-            window.setPixelColour(x, y, colour);
+            // 检查像素是否在三角形内
+            if (isPointInTriangle(x, y, triangle.v0().x, triangle.v0().y, triangle.v1().x, triangle.v1().y, triangle.v2().x, triangle.v2().y)) {
+                window.setPixelColour(x, y, colour);
+            }
         }
     }
 }
 
 
 
-void drawTriangles(DrawingWindow &window, const std::vector<CanvasTriangle> &triangles) {
+void drawTriangles(DrawingWindow &window, std::vector<CanvasTriangle> &triangles) {
     window.clearPixels();
-    for (const auto &triangle : triangles) {
-        drawTriangle(const_cast<CanvasTriangle&>(triangle).v0(),
-                     const_cast<CanvasTriangle&>(triangle).v1(),
-                     const_cast<CanvasTriangle&>(triangle).v2(), window);
+    for (CanvasTriangle &triangle : triangles) {
+        drawTriangle(triangle, window);
     }
 }
+
 CanvasPoint creatOnePoint() {
     float yPoint = rand() % HEIGHT;
     float xPoint = rand() % WIDTH;
