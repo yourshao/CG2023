@@ -94,23 +94,31 @@ void draw(DrawingWindow &window) {
 //    Drawanother(topRight, Middle, window);
 //    Drawanother(topMiddle,underMiddle, window );
 
-    CanvasPoint v0 = creatOnePoint();
-    CanvasPoint v1 = creatOnePoint();
-    CanvasPoint v2 = creatOnePoint();
-
-    CanvasTriangle oneTriangle(v0, v1, v2);
-
-    Drawanother(oneTriangle.v0(), oneTriangle.v1(),window);
-    Drawanother(oneTriangle.v1(), oneTriangle.v2(), window);
-    Drawanother(oneTriangle.v0(), oneTriangle.v2(), window);
+//    CanvasPoint v0 = creatOnePoint();
+//    CanvasPoint v1 = creatOnePoint();
+//    CanvasPoint v2 = creatOnePoint();
+//
+//    CanvasTriangle oneTriangle(v0, v1, v2);
+//
+//    Drawanother(oneTriangle.v0(), oneTriangle.v1(),window);
+//    Drawanother(oneTriangle.v1(), oneTriangle.v2(), window);
+//    Drawanother(oneTriangle.v0(), oneTriangle.v2(), window);
 
 
 }
 
 
 
+void drawTriangle(CanvasPoint v0, CanvasPoint v1, CanvasPoint v2, DrawingWindow &window) {
+    Drawanother(v0, v1, window);
+    Drawanother(v1, v2, window);
+    Drawanother(v2, v0, window);
+}
 
-
+void draw(DrawingWindow &window, CanvasTriangle& triangle) {
+    window.clearPixels();
+    drawTriangle(triangle.v0(), triangle.v1(), triangle.v2(), window);
+}
 
 
 void handleEvent(SDL_Event event, DrawingWindow &window) {
@@ -119,6 +127,13 @@ void handleEvent(SDL_Event event, DrawingWindow &window) {
 		else if (event.key.keysym.sym == SDLK_RIGHT) std::cout << "RIGHT" << std::endl;
 		else if (event.key.keysym.sym == SDLK_UP) std::cout << "UP" << std::endl;
 		else if (event.key.keysym.sym == SDLK_DOWN) std::cout << "DOWN" << std::endl;
+        else if (event.key.keysym.sym == SDLK_u) {
+            CanvasPoint v0 = creatOnePoint();
+            CanvasPoint v1 = creatOnePoint();
+            CanvasPoint v2 = creatOnePoint();
+            CanvasTriangle triangle(v0, v1, v2);
+            draw(window, triangle);
+        }
 	} else if (event.type == SDL_MOUSEBUTTONDOWN) {
 		window.savePPM("output.ppm");
 		window.saveBMP("output.bmp");
