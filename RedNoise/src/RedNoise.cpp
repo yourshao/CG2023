@@ -65,97 +65,61 @@ void Drawanother(CanvasPoint from, CanvasPoint to, DrawingWindow &window){
         window.setPixelColour(round(x), round(y), colour);
     }
 }
-
-
-
-CanvasPoint creatOnePoint(){
-    float yPoint = rand() %HEIGHT;
-    float xPoint = rand() %WIDTH;
-    return CanvasPoint(xPoint, yPoint);
-}
-
-
-
-
-void draw(DrawingWindow &window) {
-	window.clearPixels();
-
-
-//    CanvasPoint topLeft(0.0, 0.0);
-//    CanvasPoint Middle(WIDTH/2, HEIGHT/2);
-//    CanvasPoint topRight(WIDTH, 0.0);
-//    CanvasPoint topMiddle(WIDTH/2, 0);
-//    CanvasPoint underMiddle(WIDTH/2, HEIGHT);
-//    CanvasPoint twoThirdsMiddle(2*WIDTH/3, HEIGHT/2);
-//    CanvasPoint oneThirdMiddle(WIDTH/3, HEIGHT/2);
-//
-//    Drawanother(topLeft, Middle,window);
-//    Drawanother(oneThirdMiddle, twoThirdsMiddle,window);
-//    Drawanother(topRight, Middle, window);
-//    Drawanother(topMiddle,underMiddle, window );
-
-//    CanvasPoint v0 = creatOnePoint();
-//    CanvasPoint v1 = creatOnePoint();
-//    CanvasPoint v2 = creatOnePoint();
-//
-//    CanvasTriangle oneTriangle(v0, v1, v2);
-//
-//    Drawanother(oneTriangle.v0(), oneTriangle.v1(),window);
-//    Drawanother(oneTriangle.v1(), oneTriangle.v2(), window);
-//    Drawanother(oneTriangle.v0(), oneTriangle.v2(), window);
-
-
-}
-
-
-
 void drawTriangle(CanvasPoint v0, CanvasPoint v1, CanvasPoint v2, DrawingWindow &window) {
     Drawanother(v0, v1, window);
     Drawanother(v1, v2, window);
     Drawanother(v2, v0, window);
 }
 
-void draw(DrawingWindow &window, CanvasTriangle& triangle) {
+
+void drawTriangles(DrawingWindow &window, const std::vector<CanvasTriangle> &triangles) {
     window.clearPixels();
-    drawTriangle(triangle.v0(), triangle.v1(), triangle.v2(), window);
+    for (const auto &triangle : triangles) {
+        drawTriangle(const_cast<CanvasTriangle&>(triangle).v0(),
+                     const_cast<CanvasTriangle&>(triangle).v1(),
+                     const_cast<CanvasTriangle&>(triangle).v2(), window);
+    }
+}
+CanvasPoint creatOnePoint() {
+    float yPoint = rand() % HEIGHT;
+    float xPoint = rand() % WIDTH;
+    return CanvasPoint(xPoint, yPoint);
 }
 
-
-void handleEvent(SDL_Event event, DrawingWindow &window) {
-	if (event.type == SDL_KEYDOWN) {
-		if (event.key.keysym.sym == SDLK_LEFT) std::cout << "LEFT" << std::endl;
-		else if (event.key.keysym.sym == SDLK_RIGHT) std::cout << "RIGHT" << std::endl;
-		else if (event.key.keysym.sym == SDLK_UP) std::cout << "UP" << std::endl;
-		else if (event.key.keysym.sym == SDLK_DOWN) std::cout << "DOWN" << std::endl;
+void handleEvent(SDL_Event event, DrawingWindow &window, std::vector<CanvasTriangle> &triangles) {
+    if (event.type == SDL_KEYDOWN) {
+        if (event.key.keysym.sym == SDLK_LEFT) std::cout << "LEFT" << std::endl;
+        else if (event.key.keysym.sym == SDLK_RIGHT) std::cout << "RIGHT" << std::endl;
+        else if (event.key.keysym.sym == SDLK_UP) std::cout << "UP" << std::endl;
+        else if (event.key.keysym.sym == SDLK_DOWN) std::cout << "DOWN" << std::endl;
         else if (event.key.keysym.sym == SDLK_u) {
+            // 生成新的三角形并添加到容器
             CanvasPoint v0 = creatOnePoint();
             CanvasPoint v1 = creatOnePoint();
             CanvasPoint v2 = creatOnePoint();
-            CanvasTriangle triangle(v0, v1, v2);
-            draw(window, triangle);
+            triangles.push_back(CanvasTriangle(v0, v1, v2));
         }
-	} else if (event.type == SDL_MOUSEBUTTONDOWN) {
-		window.savePPM("output.ppm");
-		window.saveBMP("output.bmp");
-	}
+    } else if (event.type == SDL_MOUSEBUTTONDOWN) {
+        window.savePPM("output.ppm");
+        window.saveBMP("output.bmp");
+    }
 }
-
 
 
 
 int main(int argc, char *argv[]) {
-	DrawingWindow window = DrawingWindow(WIDTH, HEIGHT, false);
-	SDL_Event event;
+    DrawingWindow window = DrawingWindow(WIDTH, HEIGHT, false);
+    SDL_Event event;
 
+    std::vector<CanvasTriangle> triangles; // 存储生成的三角形
 
     while (true) {
-		// We MUST poll for events - otherwise the window will freeze !
-		if (window.pollForInputEvents(event)) handleEvent(event, window);
-		draw(window);
-		// Need to render the frame at the end, or nothing actually gets shown on the screen !
-		window.renderFrame();
-	}
+        // We MUST poll for events - otherwise the window will freeze!
+        if (window.pollForInputEvents(event)) handleEvent(event, window, triangles);
+        drawTriangles(window, triangles);
+        // Need to render the frame at the end, or nothing actually gets shown on the screen!
+        window.renderFrame();
+    }
 
-
-
+    return 0;
 }
