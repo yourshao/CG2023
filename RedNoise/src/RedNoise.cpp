@@ -16,7 +16,7 @@
 
 std::vector<float> interpolateSingleFloats(float from, float to, int numberOfValues){
     std::vector<float> result;
-    float difference = ( to - from ) /( numberOfValues-1 )  ;
+    float difference = ( to - from ) /(numberOfValues-1)  ;
     for (int a = 0 ;a < numberOfValues; a++){
         result.push_back(from + a * difference);
     }
@@ -68,6 +68,11 @@ void Drawanother(CanvasPoint from, CanvasPoint to, DrawingWindow &window){
 
 
 
+CanvasPoint creatOnePoint(){
+    float yPoint = rand() %HEIGHT;
+    float xPoint = rand() %WIDTH;
+    return CanvasPoint(xPoint, yPoint);
+}
 
 
 
@@ -76,24 +81,32 @@ void draw(DrawingWindow &window) {
 	window.clearPixels();
 
 
-    CanvasPoint topLeft(0.0, 0.0);
-    CanvasPoint Middle(WIDTH/2, HEIGHT/2);
-    CanvasPoint topRight(WIDTH, 0.0);
-    CanvasPoint topMiddle(WIDTH/2, 0);
-    CanvasPoint underMiddle(WIDTH/2, HEIGHT);
-    CanvasPoint twoThirdsMiddle(2*WIDTH/3, HEIGHT/2);
-    CanvasPoint oneThirdMiddle(WIDTH/3, HEIGHT/2);
+//    CanvasPoint topLeft(0.0, 0.0);
+//    CanvasPoint Middle(WIDTH/2, HEIGHT/2);
+//    CanvasPoint topRight(WIDTH, 0.0);
+//    CanvasPoint topMiddle(WIDTH/2, 0);
+//    CanvasPoint underMiddle(WIDTH/2, HEIGHT);
+//    CanvasPoint twoThirdsMiddle(2*WIDTH/3, HEIGHT/2);
+//    CanvasPoint oneThirdMiddle(WIDTH/3, HEIGHT/2);
+//
+//    Drawanother(topLeft, Middle,window);
+//    Drawanother(oneThirdMiddle, twoThirdsMiddle,window);
+//    Drawanother(topRight, Middle, window);
+//    Drawanother(topMiddle,underMiddle, window );
 
-    Drawanother(topLeft, Middle,window);
-    Drawanother(oneThirdMiddle, twoThirdsMiddle,window);
-    Drawanother(topRight, Middle, window);
-    Drawanother(topMiddle,underMiddle, window );
+    CanvasPoint v0 = creatOnePoint();
+    CanvasPoint v1 = creatOnePoint();
+    CanvasPoint v2 = creatOnePoint();
 
+    CanvasTriangle oneTriangle(v0, v1, v2);
 
-
+    Drawanother(oneTriangle.v0(), oneTriangle.v1(),window);
+    Drawanother(oneTriangle.v1(), oneTriangle.v2(), window);
+    Drawanother(oneTriangle.v0(), oneTriangle.v2(), window);
 
 
 }
+
 
 
 
@@ -118,18 +131,6 @@ void handleEvent(SDL_Event event, DrawingWindow &window) {
 int main(int argc, char *argv[]) {
 	DrawingWindow window = DrawingWindow(WIDTH, HEIGHT, false);
 	SDL_Event event;
-
-    CanvasTriangle oneTriangle;
-
-    for (int i = 0; i < 3; ++i) {
-        float yPoint = rand()%HEIGHT;
-        float xPoint = rand()%WIDTH;
-        CanvasPoint point(xPoint,yPoint);
-        oneTriangle.v1(point);
-    }
-
-    oneTriangle<<
-
 
 
     while (true) {
