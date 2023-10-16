@@ -82,6 +82,10 @@ void drawTriangle(CanvasTriangle triangle, DrawingWindow &window, uint32_t color
             // 检查像素是否在三角形内
             if (isPointInTriangle(x, y, triangle.v0().x, triangle.v0().y, triangle.v1().x, triangle.v1().y, triangle.v2().x, triangle.v2().y)) {
                 window.setPixelColour(x, y, color);
+
+                if (x == minX || x == maxX || y == minY || y == maxY) {
+                    window.setPixelColour(x, y, (255 << 24) + (255 << 16) + (255 << 8) + 255);
+                }
             }
         }
     }
