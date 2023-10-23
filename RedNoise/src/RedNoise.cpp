@@ -7,6 +7,9 @@
 #include <CanvasPoint.h>
 #include <Colour.h>
 #include <CanvasTriangle.h>
+#include <ModelTriangle.h>
+#include <sstream>
+#include <fstream>
 
 
 #define WIDTH 320
@@ -91,6 +94,9 @@ void drawTriangle(CanvasTriangle triangle, DrawingWindow &window, uint32_t color
     }
 }
 
+
+
+
 void drawTriangles(DrawingWindow &window, std::vector<CanvasTriangle> &triangles, std::vector<uint32_t> &colors) {
     window.clearPixels();
     for (size_t i = 0; i < triangles.size(); ++i) {
@@ -98,11 +104,19 @@ void drawTriangles(DrawingWindow &window, std::vector<CanvasTriangle> &triangles
     }
 }
 
+
+
+
+
 CanvasPoint creatOnePoint() {
     float yPoint = rand() % HEIGHT;
     float xPoint = rand() % WIDTH;
     return CanvasPoint(xPoint, yPoint);
 }
+
+
+
+
 
 
 void handleEvent(SDL_Event event, DrawingWindow &window, std::vector<CanvasTriangle> &triangles, std::vector<uint32_t> &colors)  {
@@ -127,6 +141,63 @@ void handleEvent(SDL_Event event, DrawingWindow &window, std::vector<CanvasTrian
 }
 
 
+std::vector<ModelTriangle> loadOBJ(const std::string &filename) {
+    std::vector<ModelTriangle> triangles;
+    std::ifstream file(filename);
+
+    if (!file.is_open()) {
+        std::cerr << "Error opening file: " << filename << std::endl;
+        return triangles;  // 返回空的三角形向量
+    }
+
+    std::string line;
+    while (std::getline(file, line)) {
+        std::istringstream iss(line);
+        std::string token;
+        iss >> token;
+
+        if (token == "v") {
+            glm::vec3 v;
+            iss >> v.x >> v.y >> v.z;
+            triangles.emplace_back(ModelTriangle(v, v, v, Colour()));  // 使用相同的颜色，可以根据需求修改
+        }
+    }
+
+    return triangles;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+//
+//CanvasPoint getCanvasIntersectionPoint(const glm::vec3& cameraPosition, const glm::vec3& vertexPosition, int focalLength){
+//
+//
+//
+//
+//
+//
+//}
+
+
+
+
+
+
+
+
+
+
+
 
 int main(int argc, char *argv[]) {
     DrawingWindow window = DrawingWindow(WIDTH, HEIGHT, false);
@@ -134,6 +205,15 @@ int main(int argc, char *argv[]) {
 
     std::vector<CanvasTriangle> triangles; // 存储生成的三角形
     std::vector<uint32_t> colors;          // 存储生成的颜色
+
+
+    // 将obj打印出来
+    std::vector<ModelTriangle> TDtriangles = loadOBJ("/Users/jekwen/Documents/大三上/CG/CG2023/RedNoise/src/cornell-box.obj");
+    for (const auto &triangle : TDtriangles) {
+        std::cout << triangle << std::endl;
+    }
+
+
 
     while (true) {
         if (window.pollForInputEvents(event)) handleEvent(event, window, triangles, colors);
