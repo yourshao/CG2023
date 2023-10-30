@@ -14,7 +14,7 @@
 
 #define WIDTH 320
 #define HEIGHT 240
-void Drawanother(CanvasPoint from, CanvasPoint to, DrawingWindow &window){
+void Drawanother(CanvasPoint from, CanvasPoint to, DrawingWindow &window, Colour color){
     float xDiff = to.x - from.x;
     float yDiff = to.y - from.y;
     float numberOfSteps = fmax(abs(xDiff), abs(yDiff));
@@ -23,7 +23,7 @@ void Drawanother(CanvasPoint from, CanvasPoint to, DrawingWindow &window){
     for (float i = 0.0; i <= numberOfSteps; i++) {
         float x = from.x + (xStepSize*i);
         float y = from.y + (yStepSize*i);
-        uint32_t colour = (255 << 24) + (255 << 16) + (255 << 8) + 255;
+        uint32_t colour = (255 << 24) + (color.red << 16) + (color.green << 8) + color.blue;
 
         window.setPixelColour(round(x), round(y), colour);
     }
@@ -32,9 +32,9 @@ void Drawanother(CanvasPoint from, CanvasPoint to, DrawingWindow &window){
 //for grey spectrum
 
 //void drawTriangle(CanvasPoint v0, CanvasPoint v1, CanvasPoint v2, DrawingWindow &window) {
-//    Drawanother(v0, v1, window);
-//    Drawanother(v1, v2, window);
-//    Drawanother(v2, v0, window);
+//    Drawline(v0, v1, window);
+//    Drawline(v1, v2, window);
+//    Drawline(v2, v0, window);
 //}
 //
 //void drawTriangles(DrawingWindow &window, const std::vector<CanvasTriangle> &triangles) {
@@ -62,7 +62,7 @@ std::vector<float> interpolateSingleFloats(float from, float to, int numberOfVal
 float interpolate(float y0, float x0, float y1, float x1, float y) {
     if (y0 == y1) {
         // 如果两个y坐标相等，直接返回其中一个x坐标
-        return x0;
+        return y0 + (y1 - y0) * (y - x0) / (x1 - x0);
     }
     return x0 + (x1 - x0) * (y - y0) / (y1 - y0);
 }
@@ -95,11 +95,45 @@ uint32_t generateRandomColor() {
 }
 
 // 在 drawTriangle 函数中添加颜色参数
-void drawTriangle(CanvasTriangle triangle, DrawingWindow &window, Colour color) {
+//void drawTriangle(CanvasTriangle triangle, DrawingWindow &window, Colour color) {
+//
+//    // 找到三角形的最小和最大y坐标
+//
+//
+//    int minY = std::min({triangle.v0().y, triangle.v1().y, triangle.v2().y});
+//    int maxY = std::max({triangle.v0().y, triangle.v1().y, triangle.v2().y});
+//
+//    // 对每一行进行扫描
+//    for (int y = minY; y <= maxY; ++y) {
+//        // 找到当前行与三角形边的交点
+//        float x01 = interpolate(triangle.v0().y, triangle.v0().x, triangle.v1().y, triangle.v1().x, y);
+//        float x12 = interpolate(triangle.v1().y, triangle.v1().x, triangle.v2().y, triangle.v2().x, y);
+//        float x20 = interpolate(triangle.v2().y, triangle.v2().x, triangle.v0().y, triangle.v0().x, y);
+//
+//        // 找到当前行的最小和最大x坐标
+//        int minX = std::min({static_cast<int>(x01), static_cast<int>(x12), static_cast<int>(x20)});
+//        int maxX = std::max({static_cast<int>(x01), static_cast<int>(x12), static_cast<int>(x20)});
+//
+//        // 对当前行的每个像素进行遍历
+//        for (int x = minX; x <= maxX; ++x) {
+//            // 检查像素是否在三角形内
+//            if (isPointInTriangle(x, y, triangle.v0().x, triangle.v0().y, triangle.v1().x, triangle.v1().y, triangle.v2().x, triangle.v2().y)) {
+////                float interpolatedDepth = interpolate(triangle.v0().x, triangle.v0().depth, triangle.v2().x, triangle.v2().depth, x);
+////                if (triangle.v0().depth <= interpolatedDepth) {
+////                    // 更新深度信息
+////                    float interpolatedBrightness = interpolate(triangle.v0().x, triangle.v0().brightness, triangle.v2().x, triangle.v2().brightness, x);
+//                    uint32_t thisColor = (255 << 24) + (color.red << 16) + (color.green << 8) + color.blue;
+//                    window.setPixelColour(x, y, thisColor);
+////                }
+//            }
+//        }
+//    }
+//}
+
+
+void drawTriangle(CanvasTriangle triangle, DrawingWindow &window, Colour color, float (*zBuffer)[WIDTH][HEIGHT]) {
 
     // 找到三角形的最小和最大y坐标
-
-
     int minY = std::min({triangle.v0().y, triangle.v1().y, triangle.v2().y});
     int maxY = std::max({triangle.v0().y, triangle.v1().y, triangle.v2().y});
 
@@ -117,30 +151,36 @@ void drawTriangle(CanvasTriangle triangle, DrawingWindow &window, Colour color) 
         // 对当前行的每个像素进行遍历
         for (int x = minX; x <= maxX; ++x) {
             // 检查像素是否在三角形内
+            float interpolatedDepth = interpolate(triangle.v0().x, triangle.v0().depth, triangle.v2().x, triangle.v2().depth, x);
+
             if (isPointInTriangle(x, y, triangle.v0().x, triangle.v0().y, triangle.v1().x, triangle.v1().y, triangle.v2().x, triangle.v2().y)) {
-                float interpolatedDepth = interpolate(triangle.v0().x, triangle.v0().depth, triangle.v2().x, triangle.v2().depth, x);
-                if (triangle.v0().depth <= interpolatedDepth) {
+                if ((*zBuffer)[x][y] != interpolatedDepth) {
                     // 更新深度信息
-//                    float interpolatedBrightness = interpolate(triangle.v0().x, triangle.v0().brightness, triangle.v2().x, triangle.v2().brightness, x);
+                    (*zBuffer)[x][y] = interpolatedDepth;
                     uint32_t thisColor = (255 << 24) + (color.red << 16) + (color.green << 8) + color.blue;
                     window.setPixelColour(x, y, thisColor);
-                    std::cout << thisColor << std::endl;
                 }
             }
         }
     }
 }
 
-
-
-
 void drawTriangles(DrawingWindow &window, std::vector<CanvasTriangle> &triangles, std::vector<Colour> &colors) {
-    window.clearPixels();
-    for (size_t i = 0; i < triangles.size(); ++i) {
-        drawTriangle(triangles[i], window, colors[i]);
+    // Initialize zBuffer
+    float zBuffer[WIDTH][HEIGHT];
 
+    for (int i = 0; i < WIDTH; ++i) {
+        for (int j = 0; j < HEIGHT; ++j) {
+            zBuffer[i][j] = 0.0f;  // Initialize with some default value
+        }
+    }
+
+    for (size_t i = 0; i < triangles.size(); ++i) {
+        std::cout << colors[i] << std::endl;
+        drawTriangle(triangles[i], window, colors[i], &zBuffer);
     }
 }
+
 
 
 CanvasPoint creatOnePoint() {
@@ -174,18 +214,12 @@ void handleEvent(SDL_Event event, DrawingWindow &window, std::vector<CanvasTrian
 
 
 
-
-
-
 // 将0到1的数值映射到RGB范围
 void mapToRGB(Colour *currentcolor, float r, float g, float b) {
     currentcolor->red = static_cast<int>(r * 255);
     currentcolor->green = static_cast<int>(g * 255);
     currentcolor->blue = static_cast<int>(b * 255);
 }
-
-
-
 
 std::vector<ModelTriangle> loadModel(const std::string& objFilePath, const std::string& mtlFilePath) {
     std::ifstream objFile(objFilePath);
@@ -210,13 +244,15 @@ std::vector<ModelTriangle> loadModel(const std::string& objFilePath, const std::
         }else if (type == "Kd") {
             float r, g, b;
             iss >> r >> g >> b;
-            mapToRGB(&currentColor, r, g, b);
+//            mapToRGB(&currentColor, r, g, b);
+            currentColor.red = static_cast<int>(r * 255);
+            currentColor.green = static_cast<int>(g * 255);
+            currentColor.blue = static_cast<int>(b * 255);
 
             colors.push_back(currentColor);
-
-
         }
     }
+
     // 存储顶点的数组
     std::vector<glm::vec3> vertices;
     std::vector<glm::vec3> vertexIndices;
@@ -248,8 +284,6 @@ std::vector<ModelTriangle> loadModel(const std::string& objFilePath, const std::
 
             vertexIndices.push_back(f); // OBJ文件索引从1开始，需要减1
 
-            std::cout<< "current coloruse: " << currentColor << std::endl;
-
             // 构建三角形并添加到数组中
             for (size_t i = 0; i < vertexIndices.size(); ++i) {
                 ModelTriangle triangle(vertices[vertexIndices[i].x - 1 ], vertices[vertexIndices[i].y -1 ], vertices[vertexIndices[i].z - 1], currentColor);
@@ -265,7 +299,6 @@ std::vector<ModelTriangle> loadModel(const std::string& objFilePath, const std::
 
     return triangles;
 }
-
 
 
 CanvasPoint getCanvasIntersectionPoint(const glm::vec3& cameraPosition, const glm::vec3& vertexPosition, int focalLength){
@@ -315,9 +348,7 @@ int main(int argc, char *argv[]) {
 
     std::vector<CanvasTriangle> triangles; // 存储生成的三角形
     std::vector<Colour> colors;          // 存储生成的颜色
-
-
-
+    window.clearPixels();
 
     // 将obj打印出来
     std::vector<ModelTriangle> TDtriangles = loadModel(
