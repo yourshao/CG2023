@@ -62,7 +62,7 @@ std::vector<float> interpolateSingleFloats(float from, float to, int numberOfVal
 float interpolate(float y0, float x0, float y1, float x1, float y) {
     if (y0 == y1) {
         // 如果两个y坐标相等，直接返回其中一个x坐标
-        return y0 + (y1 - y0) * (y - x0) / (x1 - x0);
+        return x0;
     }
     return x0 + (x1 - x0) * (y - y0) / (y1 - y0);
 }
@@ -151,32 +151,56 @@ void drawTriangle(CanvasTriangle triangle, DrawingWindow &window, Colour color, 
         // 对当前行的每个像素进行遍历
         for (int x = minX; x <= maxX; ++x) {
             // 检查像素是否在三角形内
-            float interpolatedDepth = interpolate(triangle.v0().x, triangle.v0().depth, triangle.v2().x, triangle.v2().depth, x);
 
             if (isPointInTriangle(x, y, triangle.v0().x, triangle.v0().y, triangle.v1().x, triangle.v1().y, triangle.v2().x, triangle.v2().y)) {
-                if ((*zBuffer)[x][y] < interpolatedDepth || (*zBuffer)[x][y] == 0.f ) {
+                float interpolatedDepth;
+                // 计算当前像素的深度
+                if (triangle.v0().y != triangle.v2().y && triangle.v1().y != triangle.v2().y) {
+                    float interpolatedDepthof02 = interpolate(triangle.v0().y, triangle.v0().depth, triangle.v2().y, triangle.v2().depth, y);
+                    float interpolatedDepthof12 = interpolate(triangle.v1().y, triangle.v1().depth, triangle.v2().y, triangle.v2().depth, y);
+                    float interpolatedx02 = interpolate(triangle.v0().y, triangle.v0().x, triangle.v2().y, triangle.v2().x, y);
+                    float interpolatedx12 = interpolate(triangle.v1().y, triangle.v1().x, triangle.v2().y, triangle.v2().x, y);
+                    interpolatedDepth = interpolate(interpolatedx02,interpolatedDepthof02,interpolatedx12,interpolatedDepthof12, x);
+                } else{
+                    float interpolatedDepthof02 = interpolate(triangle.v0().x, triangle.v0().depth, triangle.v2().x, triangle.v2().depth, x);
+                    float interpolatedDepthof12 = interpolate(triangle.v1().x, triangle.v1().depth, triangle.v2().x, triangle.v2().depth, x);
+                    float interpolatedy02 = interpolate(triangle.v0().x, triangle.v0().y, triangle.v2().x, triangle.v2().y, x);
+                    float interpolatedy12 = interpolate(triangle.v1().x, triangle.v1().y, triangle.v2().x, triangle.v2().y, x);
+                    interpolatedDepth = interpolate(interpolatedy02,interpolatedDepthof02,interpolatedy12,interpolatedDepthof12, y);
+                }
+
+
+                std::cout << interpolatedDepth << std::endl;
+
+                if ((*zBuffer)[x][y] >interpolatedDepth) {
                     // 更新深度信息
                     (*zBuffer)[x][y] = interpolatedDepth;
                     uint32_t thisColor = (255 << 24) + (color.red << 16) + (color.green << 8) + color.blue;
                     window.setPixelColour(x, y, thisColor);
                 }
+
+
+
+
             }
         }
     }
 }
 
+
+
 void drawTriangles(DrawingWindow &window, std::vector<CanvasTriangle> &triangles, std::vector<Colour> &colors) {
     // Initialize zBuffer
-    float zBuffer[WIDTH][HEIGHT];
+    static float zBuffer[WIDTH][HEIGHT]; // Make zBuffer static if you don't want to pass it around
 
+    // Reset zBuffer for the new frame
     for (int i = 0; i < WIDTH; ++i) {
         for (int j = 0; j < HEIGHT; ++j) {
-            zBuffer[i][j] = 0.0f;  // Initialize with some default value
+            zBuffer[i][j] = std::numeric_limits<float>::infinity();
         }
     }
 
     for (size_t i = 0; i < triangles.size(); ++i) {
-        std::cout << colors[i] << std::endl;
         drawTriangle(triangles[i], window, colors[i], &zBuffer);
     }
 }
@@ -316,13 +340,13 @@ std::vector<CanvasTriangle> projectionTrianglePoint(std::vector<ModelTriangle> t
     for (const auto &triangle : threeDtriangle) {
 
         CanvasPoint point1 = getCanvasIntersectionPoint(glm::vec3(0, 0, 16), triangle.vertices[0], 13);
-        point1.depth = 1/triangle.vertices[0].z;
+        point1.depth = -triangle.vertices[0].z;
 
         CanvasPoint point2 = getCanvasIntersectionPoint(glm::vec3(0, 0, 16), triangle.vertices[1], 13);
-        point2.depth = 1/triangle.vertices[1].z;
+        point2.depth = -triangle.vertices[1].z;
 
         CanvasPoint point3 = getCanvasIntersectionPoint(glm::vec3(0, 0, 16), triangle.vertices[2], 13);
-        point3.depth = 1/triangle.vertices[2].z;
+        point3.depth = -triangle.vertices[2].z;
 
         CanvasTriangle newTriangle( point1 , point2 , point3 );
         result.push_back(newTriangle);
