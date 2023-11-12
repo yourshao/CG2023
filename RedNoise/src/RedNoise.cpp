@@ -154,7 +154,7 @@ void drawTriangle(CanvasTriangle triangle, DrawingWindow &window, Colour color, 
             float interpolatedDepth = interpolate(triangle.v0().x, triangle.v0().depth, triangle.v2().x, triangle.v2().depth, x);
 
             if (isPointInTriangle(x, y, triangle.v0().x, triangle.v0().y, triangle.v1().x, triangle.v1().y, triangle.v2().x, triangle.v2().y)) {
-                if ((*zBuffer)[x][y] != interpolatedDepth) {
+                if ((*zBuffer)[x][y] < interpolatedDepth || (*zBuffer)[x][y] == 0.f ) {
                     // 更新深度信息
                     (*zBuffer)[x][y] = interpolatedDepth;
                     uint32_t thisColor = (255 << 24) + (color.red << 16) + (color.green << 8) + color.blue;
