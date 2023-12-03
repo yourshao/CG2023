@@ -11,8 +11,9 @@
 #include <ModelTriangle.h>
 #include <sstream>
 #include <fstream>
-#define WIDTH 320
-#define HEIGHT 240
+#include <math.h>
+#define WIDTH 320*2
+#define HEIGHT 240*2
 
 
 
@@ -70,6 +71,12 @@
 //}
 //
 //
+
+//int numberOfValues(CanvasPoint v1, CanvasPoint v2){
+//    return std::max({std::abs(v1.x - v2.x), std::abs(v1.y - v2.y)});
+//}
+//
+//
 //std::vector<float> interpolateSingleFloats(float from, float to, int numberOfValues){
 //    std::vector<float> result;
 //    float difference = (to - from) / (numberOfValues - 1);
@@ -85,6 +92,7 @@ float interpolate(float y0, float x0, float y1, float x1, float y) {
         // 如果两个y坐标相等，直接返回其中一个x坐标
         return x0;
     }
+
     return x0 + (x1 - x0) * (y - y0) / (y1 - y0);
 }
 
@@ -99,6 +107,13 @@ bool isPointInTriangle(int x, int y, float x0, float y0, float x1, float y1, flo
 }
 
 
+glm::vec3 barycentric(CanvasTriangle triangle, int x, int y) {
+    glm::vec3 u = cross(glm::vec3(triangle.v2().x-triangle.v0().x, triangle.v1().x-triangle.v0().x, triangle.v0().x- x),
+                        glm::vec3(triangle.v2().y-triangle.v0().y, triangle.v1().y-triangle.v0().y, triangle.v0().y- y));
+    if (std::abs(u.z)<1) return glm::vec3({-1,1,1}); // 避免除以0的错误
+    return glm::vec3(1.f-(u.x+u.y)/u.z, u.y/u.z, u.x/u.z);
+}
+
 
 
 void drawTriangle(CanvasTriangle triangle, DrawingWindow &window, Colour color, float (*zBuffer)[WIDTH][HEIGHT]) {
@@ -106,6 +121,7 @@ void drawTriangle(CanvasTriangle triangle, DrawingWindow &window, Colour color, 
     // 找到三角形的最小和最大y坐标
     int minY = std::min({triangle.v0().y, triangle.v1().y, triangle.v2().y});
     int maxY = std::max({triangle.v0().y, triangle.v1().y, triangle.v2().y});
+
 
     // 对每一行进行扫描
     for (int y = minY; y <= maxY; ++y) {
@@ -115,40 +131,58 @@ void drawTriangle(CanvasTriangle triangle, DrawingWindow &window, Colour color, 
         float x20 = interpolate(triangle.v2().y, triangle.v2().x, triangle.v0().y, triangle.v0().x, y);
 
         // 找到当前行的最小和最大x坐标
-        int minX = std::min({static_cast<int>(x01), static_cast<int>(x12), static_cast<int>(x20)});
-        int maxX = std::max({static_cast<int>(x01), static_cast<int>(x12), static_cast<int>(x20)});
+        int minX = std::min({floor(x01), floor(x12), floor(x20)});
+        int maxX = std::max({floor(x01), floor(x12), floor(x20)});
 
         // 对当前行的每个像素进行遍历
         for (int x = minX; x <= maxX; ++x) {
             // 检查像素是否在三角形内
-
+//            int firstX  = -1;
             if (isPointInTriangle(x, y, triangle.v0().x, triangle.v0().y, triangle.v1().x, triangle.v1().y, triangle.v2().x, triangle.v2().y)) {
+//                if (firstX == -1 ) firstX = x ;
+//===================
                 float interpolatedDepth;
-                // 计算当前像素的深度
+//                int numberOfStepsv0v2 =numberOfValues(triangle.v0(), triangle.v2());
+//                int numberOfStepsv1v2 =numberOfValues(triangle.v1(), triangle.v2());
+//                int numberOfStepsv0Now = numberOfValues(triangle.v0(), CanvasPoint(firstX, y));
+//                int numberOfStepsv1Now = numberOfValues(triangle.v1(), CanvasPoint(x, y));
+//                std::vector<float> deepthOfv0v2 = interpolateSingleFloats(triangle.v0().depth, triangle.v2().depth, numberOfStepsv0v2);
+//                std::vector<float> deepthOfv1v2 = interpolateSingleFloats(triangle.v1().depth, triangle.v2().depth, numberOfStepsv1v2);
+//                deepthOfv0v2(numberOfStepsv0Now), numberOfStepsv1v2(numberOfStepsv1Now),
+//
+//
+    // 计算当前像素的深度
                 if (triangle.v0().y != triangle.v2().y && triangle.v1().y != triangle.v2().y) {
+//                    std::cout << "aaa" << std::endl;
+
                     float interpolatedDepthof02 = interpolate(triangle.v0().y, triangle.v0().depth, triangle.v2().y, triangle.v2().depth, y);
                     float interpolatedDepthof12 = interpolate(triangle.v1().y, triangle.v1().depth, triangle.v2().y, triangle.v2().depth, y);
                     float interpolatedx02 = interpolate(triangle.v0().y, triangle.v0().x, triangle.v2().y, triangle.v2().x, y);
                     float interpolatedx12 = interpolate(triangle.v1().y, triangle.v1().x, triangle.v2().y, triangle.v2().x, y);
                     interpolatedDepth = interpolate(interpolatedx02,interpolatedDepthof02,interpolatedx12,interpolatedDepthof12, x);
+//                    std::cout << "bbb" << std::endl;
+
                 } else{
+
                     float interpolatedDepthof02 = interpolate(triangle.v0().x, triangle.v0().depth, triangle.v2().x, triangle.v2().depth, x);
                     float interpolatedDepthof12 = interpolate(triangle.v1().x, triangle.v1().depth, triangle.v2().x, triangle.v2().depth, x);
                     float interpolatedy02 = interpolate(triangle.v0().x, triangle.v0().y, triangle.v2().x, triangle.v2().y, x);
                     float interpolatedy12 = interpolate(triangle.v1().x, triangle.v1().y, triangle.v2().x, triangle.v2().y, x);
                     interpolatedDepth = interpolate(interpolatedy02,interpolatedDepthof02,interpolatedy12,interpolatedDepthof12, y);
+
                 }
 
+//                glm::vec3 weight =  barycentric(triangle, x, y);
+//                interpolatedDepth = weight[1]*triangle.v1().depth + weight[0] * triangle.v0().depth + weight[2] * triangle.v2().depth;
+//                if(weight[0] < 0 || weight [1] < 0 || weight[2] < 0 ) continue;
+
+                if (x<=0 || x>= WIDTH) return;
                 if ((*zBuffer)[x][y] >interpolatedDepth) {
                     // 更新深度信息
                     (*zBuffer)[x][y] = interpolatedDepth;
                     uint32_t thisColor = (255 << 24) + (color.red << 16) + (color.green << 8) + color.blue;
                     window.setPixelColour(x, y, thisColor);
                 }
-
-
-
-
             }
         }
     }
@@ -268,8 +302,6 @@ CanvasPoint getCanvasIntersectionPoint(const glm::vec3& cameraPosition, const gl
 
     glm::vec3 adjustedVector = ( cameraPosition - vertexPosition) * cameraOrientation ;
 
-
-
     float u = focalLength * -adjustedVector.x / adjustedVector.z * 30 + WIDTH/2;
     float v = focalLength * adjustedVector.y / adjustedVector.z * 30 + HEIGHT/2;
 
@@ -287,16 +319,18 @@ std::vector<CanvasTriangle> projectionTrianglePoint(std::vector<ModelTriangle> t
     for (const auto &triangle : threeDtriangle) {
 
         CanvasPoint point1 = getCanvasIntersectionPoint(cameraPosition, triangle.vertices[0], 14, camaraOrientation);//前一位越大越没有深度，后一位越大越近
-        point1.depth = -triangle.vertices[0].z;
+        point1.depth = std::sqrt(pow(triangle.vertices[0].x - cameraPosition.x, 2) + pow(triangle.vertices[0].z - cameraPosition.z, 2));
 
         CanvasPoint point2 = getCanvasIntersectionPoint(cameraPosition, triangle.vertices[1], 14, camaraOrientation);
-        point2.depth = -triangle.vertices[1].z;
+        point2.depth = std::sqrt(pow(triangle.vertices[1].x - cameraPosition.x, 2) + pow(triangle.vertices[1].z- cameraPosition.z, 2));
 
         CanvasPoint point3 = getCanvasIntersectionPoint(cameraPosition, triangle.vertices[2], 14, camaraOrientation);
-        point3.depth = -triangle.vertices[2].z;
+        point3.depth = std::sqrt(pow(triangle.vertices[2].x - cameraPosition.x, 2) + pow(triangle.vertices[2].z - cameraPosition.z, 2));
 
         CanvasTriangle newTriangle( point1 , point2 , point3 );
         result.push_back(newTriangle);
+
+
     }
 
     return result;
@@ -313,8 +347,60 @@ std::vector<Colour> projectionTriangleColour(std::vector<ModelTriangle> threeDtr
 }
 
 
+//void lookAt(glm::mat3& cameraOrientation, float z, int dX){
+//
+//    float rotation = -asin(dX/z);
+//    std::cout<< rotation << std::endl;
+//    glm::mat3 rotationMatrix (glm::vec3(cos(rotation), 0.0, sin(rotation)),
+//                              glm::vec3(0.0, 1.0, 0.0),
+//                              glm::vec3(-sin(rotation), 0.0, cos(rotation))
+//    );
+//
+//    cameraOrientation = rotationMatrix * cameraOrientation;
+//}
 
-void handleEvent(SDL_Event event, DrawingWindow &window, std::vector<CanvasTriangle> &triangles, glm::vec3& cameraPosition, std::vector<ModelTriangle> &TDtriangles, glm::mat3& cameraOrientation ) {
+
+std::vector<CanvasTriangle> cameraOrbit(std::vector<CanvasTriangle> &triangles ,std::vector<ModelTriangle> &TDtriangles, glm::vec3& cameraPosition, glm::mat3 &cameraOrientation,DrawingWindow &window, std::vector<Colour> &colors ){
+
+    float currentAngle = glm::radians(270.0f);
+    // 定义圆的半径和摄像机移动的角度增量
+    float radius = cameraPosition.z;
+    float angleIncrement = -glm::radians(1.0f); // 每次移动5度
+
+    while(true){
+        currentAngle += angleIncrement;
+        if (currentAngle >= 2 * 3.14f) {
+            currentAngle = 0.0f;
+        }
+// 计算新的摄像机位置
+        cameraPosition.x = radius * cos(currentAngle);
+        cameraPosition.z = -radius * sin(currentAngle);
+        // 更新角度
+
+// 确保摄像机的y坐标保持不变
+
+
+//        lookAt(cameraOrientation, z, dX);
+
+        glm::mat3 rotationMatrix ( glm::vec3(cos(-angleIncrement), 0.0, sin(-angleIncrement)),
+                                   glm::vec3(0.0, 1.0, 0.0),
+                                   glm::vec3(-sin(-angleIncrement), 0.0, cos(-angleIncrement))
+        );
+
+        cameraOrientation = rotationMatrix * cameraOrientation;
+
+        triangles =  projectionTrianglePoint(TDtriangles, cameraPosition, cameraOrientation);
+        window.clearPixels();
+        std::cout<< "aaa" << std::endl;
+        drawTriangles(window,triangles, colors);
+        window.renderFrame();
+
+    }
+
+}
+
+
+void handleEvent(SDL_Event event, DrawingWindow &window, std::vector<CanvasTriangle> &triangles, glm::vec3& cameraPosition, std::vector<ModelTriangle> &TDtriangles, glm::mat3& cameraOrientation, std::vector<Colour> &colors ) {
     if (event.type == SDL_KEYDOWN) {
         if (event.key.keysym.sym == SDLK_LEFT) {
             cameraPosition.x -= 1;
@@ -387,6 +473,15 @@ void handleEvent(SDL_Event event, DrawingWindow &window, std::vector<CanvasTrian
             cameraOrientation = rotationMatrix * cameraOrientation;
             triangles = projectionTrianglePoint(TDtriangles, cameraPosition, cameraOrientation);
         }
+        else if (event.key.keysym.sym == SDLK_o){
+
+
+
+            cameraOrbit(triangles, TDtriangles, cameraPosition, cameraOrientation, window, colors);
+
+
+
+        }
 
         else if (event.key.keysym.sym == SDLK_u) {
 //            // 生成新的三角形并添加到容器
@@ -403,10 +498,8 @@ void handleEvent(SDL_Event event, DrawingWindow &window, std::vector<CanvasTrian
     }
 }
 
-
-
 int main(int argc, char *argv[]) {
-    DrawingWindow window = DrawingWindow(WIDTH*2, HEIGHT*2, false);
+    DrawingWindow window = DrawingWindow(WIDTH, HEIGHT, false);
     SDL_Event event;
 
     std::vector<CanvasTriangle> triangles;
@@ -424,20 +517,11 @@ int main(int argc, char *argv[]) {
                               glm::vec3(0,1,0),
                               glm::vec3(0,0,1));
 
-//    glm::mat3 rotationMatrix (glm::ve3(1,0,0),
-//                              glm::vec3(0,1,0),
-//                              glm::vec3(0,0,1));
-
-
-
-
-
     triangles =  projectionTrianglePoint(TDtriangles, cameraPosition, camaraOrientation);
     while (true) {
-        if (window.pollForInputEvents(event)) handleEvent(event, window, triangles, cameraPosition, TDtriangles, camaraOrientation);
+        if (window.pollForInputEvents(event)) handleEvent(event, window, triangles, cameraPosition, TDtriangles, camaraOrientation, colors);
         window.clearPixels();
         drawTriangles(window,triangles, colors);
-        std::cout << sin(3.14/3)<< std::endl;
         window.renderFrame();
     }
     return 0;
