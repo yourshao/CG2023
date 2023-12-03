@@ -344,17 +344,15 @@ std::vector<Colour> projectionTriangleColour(std::vector<ModelTriangle> threeDtr
 }
 
 
-//void lookAt(glm::mat3& cameraOrientation, float z, int dX){
-//
-//    float rotation = -asin(dX/z);
-//    std::cout<< rotation << std::endl;
-//    glm::mat3 rotationMatrix (glm::vec3(cos(rotation), 0.0, sin(rotation)),
-//                              glm::vec3(0.0, 1.0, 0.0),
-//                              glm::vec3(-sin(rotation), 0.0, cos(rotation))
-//    );
-//
-//    cameraOrientation = rotationMatrix * cameraOrientation;
-//}
+void lookAt(glm::mat3& cameraOrientation, glm::vec3& cameraPosition, float angleIncrement){
+// 更新角度
+glm::mat3 rotationMatrix ( glm::vec3(cos(-angleIncrement), 0.0, sin(-angleIncrement)),
+                           glm::vec3(0.0, 1.0, 0.0),
+                           glm::vec3(-sin(-angleIncrement), 0.0, cos(-angleIncrement))
+);
+
+cameraOrientation = rotationMatrix * cameraOrientation;
+}
 
 
 std::vector<CanvasTriangle> cameraOrbit(std::vector<CanvasTriangle> &triangles ,std::vector<ModelTriangle> &TDtriangles, glm::vec3& cameraPosition, glm::mat3 &cameraOrientation,DrawingWindow &window, std::vector<Colour> &colors ){
@@ -366,25 +364,23 @@ std::vector<CanvasTriangle> cameraOrbit(std::vector<CanvasTriangle> &triangles ,
 
     while(true){
         currentAngle += angleIncrement;
-        if (currentAngle >= 2 * 3.14f) {
-            currentAngle = 0.0f;
+        if (currentAngle <= 0.0f) {
+            currentAngle = glm::radians(360.0f);
         }
 // 计算新的摄像机位置
         cameraPosition.x = radius * cos(currentAngle);
         cameraPosition.z = -radius * sin(currentAngle);
+//
         // 更新角度
+//
+//        glm::mat3 rotationMatrix ( glm::vec3(cos(-angleIncrement), 0.0, sin(-angleIncrement)),
+//                                   glm::vec3(0.0, 1.0, 0.0),
+//                                   glm::vec3(-sin(-angleIncrement), 0.0, cos(-angleIncrement))
+//        );
+//
+//        cameraOrientation = rotationMatrix * cameraOrientation;
 
-// 确保摄像机的y坐标保持不变
-
-
-//        lookAt(cameraOrientation, z, dX);
-
-        glm::mat3 rotationMatrix ( glm::vec3(cos(-angleIncrement), 0.0, sin(-angleIncrement)),
-                                   glm::vec3(0.0, 1.0, 0.0),
-                                   glm::vec3(-sin(-angleIncrement), 0.0, cos(-angleIncrement))
-        );
-
-        cameraOrientation = rotationMatrix * cameraOrientation;
+        lookAt(cameraOrientation, cameraPosition, angleIncrement);
 
         triangles =  projectionTrianglePoint(TDtriangles, cameraPosition, cameraOrientation);
         window.clearPixels();
@@ -392,7 +388,6 @@ std::vector<CanvasTriangle> cameraOrbit(std::vector<CanvasTriangle> &triangles ,
         window.renderFrame();
 
     }
-
 }
 
 
