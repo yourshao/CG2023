@@ -169,7 +169,6 @@ void drawTriangle(CanvasTriangle triangle, DrawingWindow &window, Colour color, 
                     float interpolatedy02 = interpolate(triangle.v0().x, triangle.v0().y, triangle.v2().x, triangle.v2().y, x);
                     float interpolatedy12 = interpolate(triangle.v1().x, triangle.v1().y, triangle.v2().x, triangle.v2().y, x);
                     interpolatedDepth = interpolate(interpolatedy02,interpolatedDepthof02,interpolatedy12,interpolatedDepthof12, y);
-
                 }
 
 //                glm::vec3 weight =  barycentric(triangle, x, y);
@@ -199,10 +198,11 @@ void drawTriangles(DrawingWindow &window, std::vector<CanvasTriangle> &triangles
             zBuffer[i][j] = std::numeric_limits<float>::infinity();
         }
     }
-
     for (size_t i = 0; i < triangles.size(); ++i) {
         drawTriangle(triangles[i], window, colors[i], &zBuffer);
+
     }
+
 }
 
 //CanvasPoint creatOnePoint() {
@@ -298,8 +298,6 @@ std::vector<ModelTriangle> loadModel(const std::string& objFilePath, const std::
 
 CanvasPoint getCanvasIntersectionPoint(const glm::vec3& cameraPosition, const glm::vec3& vertexPosition, int focalLength, glm::mat3& cameraOrientation){
 
-//      glm::vec3 adjustedvector = camaraOrientation * cameraPosition;
-
     glm::vec3 adjustedVector = ( cameraPosition - vertexPosition) * cameraOrientation ;
 
     float u = focalLength * -adjustedVector.x / adjustedVector.z * 30 + WIDTH/2;
@@ -329,7 +327,6 @@ std::vector<CanvasTriangle> projectionTrianglePoint(std::vector<ModelTriangle> t
 
         CanvasTriangle newTriangle( point1 , point2 , point3 );
         result.push_back(newTriangle);
-
 
     }
 
@@ -391,7 +388,6 @@ std::vector<CanvasTriangle> cameraOrbit(std::vector<CanvasTriangle> &triangles ,
 
         triangles =  projectionTrianglePoint(TDtriangles, cameraPosition, cameraOrientation);
         window.clearPixels();
-        std::cout<< "aaa" << std::endl;
         drawTriangles(window,triangles, colors);
         window.renderFrame();
 
@@ -474,12 +470,7 @@ void handleEvent(SDL_Event event, DrawingWindow &window, std::vector<CanvasTrian
             triangles = projectionTrianglePoint(TDtriangles, cameraPosition, cameraOrientation);
         }
         else if (event.key.keysym.sym == SDLK_o){
-
-
-
             cameraOrbit(triangles, TDtriangles, cameraPosition, cameraOrientation, window, colors);
-
-
 
         }
 
