@@ -136,11 +136,11 @@ CanvasPoint getCanvasIntersectionPoint(const glm::vec3& cameraPosition, const gl
 
 
 
-void getClosestValidIntersection(DrawingWindow &window, glm::vec3 cameraPosition, glm::vec3 rayDirection, std::vector<RayTriangleIntersection> rayTriangles, glm::mat3& cameraOrientation) {
+glm::vec3 getClosestValidIntersection(DrawingWindow &window, glm::vec3 cameraPosition, glm::vec3 rayDirection, std::vector<RayTriangleIntersection> rayTriangles, glm::mat3& cameraOrientation) {
     float minDistance = std::numeric_limits<float>::infinity();
     glm::vec3 closestIntersection(-1.0f);
     ModelTriangle triangleDone;
-
+    glm::vec3 ClosestValidIntersection;
 
     for (const RayTriangleIntersection& triangle : rayTriangles) {
         glm::vec3 e0 = triangle.intersectedTriangle.vertices[1] - triangle.intersectedTriangle.vertices[0];
@@ -149,15 +149,7 @@ void getClosestValidIntersection(DrawingWindow &window, glm::vec3 cameraPosition
         glm::mat3 DEMatrix(-rayDirection, e0, e1);
         glm::vec3 tuv = glm::inverse(DEMatrix) * SPVector;
 
-        // 检查是否有交点
-
-        bool uBig = tuv.y >= 0.0f && tuv.y <= 1.0f;
-        bool vBig = tuv.z >= 0.0f && tuv.z <= 1.0f;
-        bool uPlusV = (tuv.y + tuv.z) <= 1.0f;
-//        tuv.x > 0.0f && tuv.y >= 0.0f && tuv.y <= 1.0f && tuv.z >= 0.0f && tuv.z <= 1.0f && (tuv.y + tuv.z) <= 1.0f
-        bool big = uBig || vBig;
-
-        if (big && uPlusV) {
+        if (tuv.x > 0.0f && tuv.y >= 0.0f && tuv.y <= 1.0f && tuv.z >= 0.0f && tuv.z <= 1.0f && (tuv.y + tuv.z) <= 1.0f) {
             float distance = tuv.x; // t即为距离
             if (distance < minDistance) {
                 minDistance = distance;
@@ -167,12 +159,14 @@ void getClosestValidIntersection(DrawingWindow &window, glm::vec3 cameraPosition
         }
     }
 
+
+    return
+
     if (minDistance != std::numeric_limits<float>::infinity()) {
-       glm::vec3 t =  triangleDone.vertices[0] + closestIntersection.y * (triangleDone.vertices[1] - triangleDone.vertices[0])
+       glm::vec3 r =  triangleDone.vertices[0] + closestIntersection.y * (triangleDone.vertices[1] - triangleDone.vertices[0])
                +closestIntersection.z *  (triangleDone.vertices[2] - triangleDone.vertices[0]);
 
-        std::cout << "t is " << t.x << " " << t.y << " " << t.z << std::endl;
-        CanvasPoint point = getCanvasIntersectionPoint(cameraPosition, t, 14, cameraOrientation);
+        CanvasPoint point = getCanvasIntersectionPoint(cameraPosition, r, 14, cameraOrientation);
         uint32_t thisColor = (255 << 24) + (triangleDone.colour.red << 16) + (triangleDone.colour.green << 8) + triangleDone.colour.blue;
         window.setPixelColour(point.x, point.y, thisColor);
 
@@ -181,35 +175,31 @@ void getClosestValidIntersection(DrawingWindow &window, glm::vec3 cameraPosition
 }
 
 
-glm::vec3 calculateRayDirection(int x, int y, glm::vec3 cameraPosition){//可能不对
-    float u = x - WIDTH/2;
-    float v = y - HEIGHT/2;
-    float w = -HEIGHT/(2*tan(45/2));
-    glm::vec3 rayDirection = glm::normalize(glm::vec3(u,v,w) - cameraPosition);
+glm::vec3 computeRayDirection(const glm::vec3& cameraPosition, int x, int y, const glm::mat3& cameraOrientation, float focalLength) {
+    int constScale = 30;
+    glm::vec3 pixelWorldPos;
+    pixelWorldPos.x = (x - WIDTH / 2) / (constScale * focalLength);
+    pixelWorldPos.y = (y - HEIGHT / 2) / (constScale * focalLength);
+    pixelWorldPos.z = 0;
+    // Transform the direction vector to world space using the camera's orientation
+    glm::vec3 rayDirection = glm::normalize(pixelWorldPos - cameraPosition);
+
     return rayDirection;
 }
 
+
 void drawByRay(DrawingWindow &window,glm::vec3& cameraPosition, std::vector<RayTriangleIntersection> rayTriangle, glm::mat3& cameraOrientation){
-
-
 
     // Reset zBuffer for the new frame
     for (int i = 0; i < WIDTH; ++i) {//为什么not screen会出现，我知道需要经过一些运算才会到xy，但是这本身不合理
         for (int j = 0; j < HEIGHT; ++j) {
-            glm::vec3  rayDirection = calculateRayDirection(i, j, cameraPosition); // 需要实现这个函数
+            glm::vec3  rayDirection = computeRayDirection(cameraPosition, i, j, cameraOrientation,14 ); // 需要实现这个函数
             getClosestValidIntersection( window, cameraPosition, rayDirection, rayTriangle, cameraOrientation);
+
         }
     }
 
-
-
 }
-
-
-
-
-
-
 
 
 
