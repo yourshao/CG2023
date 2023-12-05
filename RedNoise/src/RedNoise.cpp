@@ -141,6 +141,7 @@ RayTriangleIntersection getClosestValidIntersection(DrawingWindow &window, glm::
     glm::vec3 closestIntersection(-1.0f);
     ModelTriangle triangleDone;
     glm::vec3 tuv;
+    glm::vec3 tuvDone;
 
     for (const RayTriangleIntersection& triangle : rayTriangles) {
         glm::vec3 e0 = triangle.intersectedTriangle.vertices[1] - triangle.intersectedTriangle.vertices[0];
@@ -152,13 +153,14 @@ RayTriangleIntersection getClosestValidIntersection(DrawingWindow &window, glm::
         if (tuv.x > 0.0f && tuv.y >= 0.0f && tuv.y <= 1.0f && tuv.z >= 0.0f && tuv.z <= 1.0f && (tuv.y + tuv.z) <= 1.0f) {
             float distance = tuv.x; // t即为距离
             if (distance < minDistance) {
+                tuvDone = tuv;
                 minDistance = distance;
                 triangleDone = triangle.intersectedTriangle;
             }
         }
     }
-    glm::vec3 r =  triangleDone.vertices[0] + tuv.y * (triangleDone.vertices[1] - triangleDone.vertices[0])
-               +tuv.z *  (triangleDone.vertices[2] - triangleDone.vertices[0]);
+    glm::vec3 r =  triangleDone.vertices[0] + tuvDone.y * (triangleDone.vertices[1] - triangleDone.vertices[0])
+               +tuvDone.z *  (triangleDone.vertices[2] - triangleDone.vertices[0]);
     RayTriangleIntersection  closestValidIntersection(r, minDistance, triangleDone, 0);
 
 
@@ -192,9 +194,6 @@ glm::vec3 computeRayDirection(const glm::vec3& cameraPosition, int x, int y, con
 void drawByRay(DrawingWindow &window,glm::vec3& cameraPosition, std::vector<RayTriangleIntersection> rayTriangle, glm::mat3& cameraOrientation, glm::vec3 lightPosition){
     uint32_t thisColor = (255 << 24) + (255 << 16) + (255 << 8) + 255;
 
-    CanvasPoint lightPoint = getCanvasIntersectionPoint(cameraPosition, lightPosition, 14, cameraOrientation);
-    glm::vec3 rayLightDirection = computeRayDirection(cameraPosition, lightPoint.x, lightPoint.y, cameraOrientation,14 );
-
     // Reset zBuffer for the new frame
     window.clearPixels();
     for (int i = 0; i < WIDTH; ++i) {
@@ -209,14 +208,24 @@ void drawByRay(DrawingWindow &window,glm::vec3& cameraPosition, std::vector<RayT
             //计算摄像机到光线的方向
 
 
-
-            glm::vec3 lightDirection = rayDirection - rayLightDirection;
+            glm::vec3 lightDirection = glm::normalize(closestValidIntersection.intersectionPoint -lightPosition);
 
             RayTriangleIntersection closestLightedIntersection = getClosestValidIntersection( window, lightPosition, lightDirection, rayTriangle, cameraOrientation);
 
-            if (closestValidIntersection.intersectionPoint == closestLightedIntersection.intersectionPoint) {
+            // 如果光线与物体之间没有遮挡，那么就画出这个像素
+
+            if (closestValidIntersection.intersectionPoint.x == closestLightedIntersection.intersectionPoint.x) {
                 window.setPixelColour(i, j, thisColor);
+                std::cout << "lighted" << std::endl;
             }
+
+
+
+
+//
+//            if (closestValidIntersection.intersectionPoint == closestLightedIntersection.intersectionPoint) {
+//
+//            }
 
 
 
@@ -593,7 +602,7 @@ int main(int argc, char *argv[]) {
     DrawingWindow window = DrawingWindow(WIDTH, HEIGHT, false);
     SDL_Event event;
 
-    glm::vec3 lightPosition(0.0f, 0.4f, 0.0f);
+    glm::vec3 lightPosition(0.0f, 2.0f, 0.0f);
 
     std::vector<RayTriangleIntersection> rayTriangles;
     std::vector<Colour> colors;
