@@ -136,42 +136,43 @@ CanvasPoint getCanvasIntersectionPoint(const glm::vec3& cameraPosition, const gl
 
 
 
-glm::vec3 getClosestValidIntersection(DrawingWindow &window, glm::vec3 cameraPosition, glm::vec3 rayDirection, std::vector<RayTriangleIntersection> rayTriangles, glm::mat3& cameraOrientation) {
+RayTriangleIntersection getClosestValidIntersection(DrawingWindow &window, glm::vec3 cameraPosition, glm::vec3 rayDirection, std::vector<RayTriangleIntersection> rayTriangles, glm::mat3& cameraOrientation) {
     float minDistance = std::numeric_limits<float>::infinity();
     glm::vec3 closestIntersection(-1.0f);
     ModelTriangle triangleDone;
-    glm::vec3 ClosestValidIntersection;
+    glm::vec3 tuv;
 
     for (const RayTriangleIntersection& triangle : rayTriangles) {
         glm::vec3 e0 = triangle.intersectedTriangle.vertices[1] - triangle.intersectedTriangle.vertices[0];
         glm::vec3 e1 = triangle.intersectedTriangle.vertices[2] - triangle.intersectedTriangle.vertices[0];
         glm::vec3 SPVector = cameraPosition - triangle.intersectedTriangle.vertices[0];
         glm::mat3 DEMatrix(-rayDirection, e0, e1);
-        glm::vec3 tuv = glm::inverse(DEMatrix) * SPVector;
+        tuv = glm::inverse(DEMatrix) * SPVector;
 
         if (tuv.x > 0.0f && tuv.y >= 0.0f && tuv.y <= 1.0f && tuv.z >= 0.0f && tuv.z <= 1.0f && (tuv.y + tuv.z) <= 1.0f) {
             float distance = tuv.x; // t即为距离
             if (distance < minDistance) {
                 minDistance = distance;
-                closestIntersection = cameraPosition + distance * rayDirection;
                 triangleDone = triangle.intersectedTriangle;
             }
         }
     }
+    glm::vec3 r =  triangleDone.vertices[0] + tuv.y * (triangleDone.vertices[1] - triangleDone.vertices[0])
+               +tuv.z *  (triangleDone.vertices[2] - triangleDone.vertices[0]);
+    RayTriangleIntersection  closestValidIntersection(r, minDistance, triangleDone, 0);
 
 
-    return
+    return closestValidIntersection;
 
-    if (minDistance != std::numeric_limits<float>::infinity()) {
-       glm::vec3 r =  triangleDone.vertices[0] + closestIntersection.y * (triangleDone.vertices[1] - triangleDone.vertices[0])
-               +closestIntersection.z *  (triangleDone.vertices[2] - triangleDone.vertices[0]);
-
-        CanvasPoint point = getCanvasIntersectionPoint(cameraPosition, r, 14, cameraOrientation);
-        uint32_t thisColor = (255 << 24) + (triangleDone.colour.red << 16) + (triangleDone.colour.green << 8) + triangleDone.colour.blue;
-        window.setPixelColour(point.x, point.y, thisColor);
-
-    }
-
+//    if (minDistance != std::numeric_limits<float>::infinity()) {
+//       glm::vec3 r =  triangleDone.vertices[0] + closestIntersection.y * (triangleDone.vertices[1] - triangleDone.vertices[0])
+//               +closestIntersection.z *  (triangleDone.vertices[2] - triangleDone.vertices[0]);
+//
+//        CanvasPoint point = getCanvasIntersectionPoint(cameraPosition, r, 14, cameraOrientation);
+//        uint32_t thisColor = (255 << 24) + (triangleDone.colour.red << 16) + (triangleDone.colour.green << 8) + triangleDone.colour.blue;
+//        window.setPixelColour(point.x, point.y, thisColor);
+//
+//    }
 }
 
 
@@ -179,8 +180,8 @@ glm::vec3 computeRayDirection(const glm::vec3& cameraPosition, int x, int y, con
     int constScale = 30;
     glm::vec3 pixelWorldPos;
     pixelWorldPos.x = (x - WIDTH / 2) / (constScale * focalLength);
-    pixelWorldPos.y = (y - HEIGHT / 2) / (constScale * focalLength);
-    pixelWorldPos.z = 0;
+    pixelWorldPos.y = (HEIGHT / 2 - y) / (constScale * focalLength);
+    pixelWorldPos.z = focalLength;
     // Transform the direction vector to world space using the camera's orientation
     glm::vec3 rayDirection = glm::normalize(pixelWorldPos - cameraPosition);
 
@@ -188,21 +189,42 @@ glm::vec3 computeRayDirection(const glm::vec3& cameraPosition, int x, int y, con
 }
 
 
-void drawByRay(DrawingWindow &window,glm::vec3& cameraPosition, std::vector<RayTriangleIntersection> rayTriangle, glm::mat3& cameraOrientation){
+void drawByRay(DrawingWindow &window,glm::vec3& cameraPosition, std::vector<RayTriangleIntersection> rayTriangle, glm::mat3& cameraOrientation, glm::vec3 lightPosition){
+    uint32_t thisColor = (255 << 24) + (255 << 16) + (255 << 8) + 255;
+
+    CanvasPoint lightPoint = getCanvasIntersectionPoint(cameraPosition, lightPosition, 14, cameraOrientation);
+    glm::vec3 rayLightDirection = computeRayDirection(cameraPosition, lightPoint.x, lightPoint.y, cameraOrientation,14 );
 
     // Reset zBuffer for the new frame
-    for (int i = 0; i < WIDTH; ++i) {//为什么not screen会出现，我知道需要经过一些运算才会到xy，但是这本身不合理
+    window.clearPixels();
+    for (int i = 0; i < WIDTH; ++i) {
         for (int j = 0; j < HEIGHT; ++j) {
             glm::vec3  rayDirection = computeRayDirection(cameraPosition, i, j, cameraOrientation,14 ); // 需要实现这个函数
-            getClosestValidIntersection( window, cameraPosition, rayDirection, rayTriangle, cameraOrientation);
+            RayTriangleIntersection  closestValidIntersection = getClosestValidIntersection( window, cameraPosition, rayDirection, rayTriangle, cameraOrientation);
+            thisColor = (255 << 24) + (closestValidIntersection.intersectedTriangle.colour.red << 16) +
+                    (closestValidIntersection.intersectedTriangle.colour.green << 8) +
+                    closestValidIntersection.intersectedTriangle.colour.blue;
+
+
+            //计算摄像机到光线的方向
+
+
+
+            glm::vec3 lightDirection = rayDirection - rayLightDirection;
+
+            RayTriangleIntersection closestLightedIntersection = getClosestValidIntersection( window, lightPosition, lightDirection, rayTriangle, cameraOrientation);
+
+            if (closestValidIntersection.intersectionPoint == closestLightedIntersection.intersectionPoint) {
+                window.setPixelColour(i, j, thisColor);
+            }
+
+
+
 
         }
     }
 
 }
-
-
-
 
 
 
@@ -467,7 +489,7 @@ std::vector<CanvasTriangle> cameraOrbit(std::vector<RayTriangleIntersection> &tr
 
         triangles =  projectionTrianglePoint(TDtriangles, cameraPosition, cameraOrientation);
         window.clearPixels();
-        drawByRay(window, cameraPosition, triangles, cameraOrientation);
+        drawByRay(window, cameraPosition, triangles, cameraOrientation, glm::vec3(0.0f, 0.4f, 0.0f));
         window.renderFrame();
 
     }
@@ -571,6 +593,8 @@ int main(int argc, char *argv[]) {
     DrawingWindow window = DrawingWindow(WIDTH, HEIGHT, false);
     SDL_Event event;
 
+    glm::vec3 lightPosition(0.0f, 0.4f, 0.0f);
+
     std::vector<RayTriangleIntersection> rayTriangles;
     std::vector<Colour> colors;
     window.clearPixels();
@@ -591,7 +615,7 @@ int main(int argc, char *argv[]) {
     while (true) {
         if (window.pollForInputEvents(event)) handleEvent(event, window, rayTriangles, cameraPosition, TDtriangles, camaraOrientation, colors);
         window.clearPixels();
-        drawByRay(window,cameraPosition, rayTriangles, camaraOrientation);
+        drawByRay(window,cameraPosition, rayTriangles, camaraOrientation, lightPosition);
         window.renderFrame();
     }
     return 0;
