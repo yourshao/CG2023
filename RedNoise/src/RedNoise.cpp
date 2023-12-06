@@ -136,7 +136,7 @@ CanvasPoint getCanvasIntersectionPoint(const glm::vec3& cameraPosition, const gl
 
 
 
-RayTriangleIntersection getClosestValidIntersection(DrawingWindow &window, glm::vec3 cameraPosition, glm::vec3 rayDirection, std::vector<RayTriangleIntersection> rayTriangles, glm::mat3& cameraOrientation) {
+RayTriangleIntersection getClosestValidIntersection(glm::vec3 cameraPosition, glm::vec3 rayDirection, std::vector<RayTriangleIntersection> rayTriangles, glm::mat3& cameraOrientation) {
     float minDistance = std::numeric_limits<float>::infinity();
     glm::vec3 closestIntersection(-1.0f);
     ModelTriangle triangleDone;
@@ -205,13 +205,13 @@ void drawByRay(DrawingWindow &window,glm::vec3& cameraPosition, std::vector<RayT
     for (int i = 0; i < WIDTH; ++i) {
         for (int j = 0; j < HEIGHT; ++j) {
             glm::vec3  rayDirection = computeRayDirection(cameraPosition, i, j, cameraOrientation,14 ); // 需要实现这个函数
-            RayTriangleIntersection  closestValidIntersection = getClosestValidIntersection( window, cameraPosition, rayDirection, rayTriangle, cameraOrientation);
+            RayTriangleIntersection  closestValidIntersection = getClosestValidIntersection(  cameraPosition, rayDirection, rayTriangle, cameraOrientation);
             thisColor = (255 << 24) + (closestValidIntersection.intersectedTriangle.colour.red << 16) +
                     (closestValidIntersection.intersectedTriangle.colour.green << 8) +
                     closestValidIntersection.intersectedTriangle.colour.blue;
             //计算摄像机到光线的方向
             glm::vec3 lightDirection = glm::normalize( closestValidIntersection.intersectionPoint - lightPosition);
-            RayTriangleIntersection closestLightedIntersection = getClosestValidIntersection( window, lightPosition, lightDirection, rayTriangle, cameraOrientation);
+            RayTriangleIntersection closestLightedIntersection = getClosestValidIntersection(  lightPosition, lightDirection, rayTriangle, cameraOrientation);
             // 如果光线与物体之间没有遮挡，那么就画出这个像素
 //            std::cout << closestLightedIntersection.distanceFromCamera << std::endl;
 //            if (closestValidIntersection.triangleIndex == closestLightedIntersection.triangleIndex) {
@@ -219,7 +219,6 @@ void drawByRay(DrawingWindow &window,glm::vec3& cameraPosition, std::vector<RayT
 
                 float attenuation = 100.0f /(3* 3.14f * distance * distance) ; // 计算衰减
                 float distanceBrightness = attenuation; // 使用衰减作为亮度
-
 
 // 计算光线与法线的夹角
                 float dotProduct = glm::dot(closestValidIntersection.intersectedTriangle.normal, glm::normalize( lightPosition - closestValidIntersection.intersectionPoint));
@@ -233,13 +232,24 @@ void drawByRay(DrawingWindow &window,glm::vec3& cameraPosition, std::vector<RayT
             }
 
 
+            // 保证颜色分量在有效范围内 [0, 255]
+            int redComponent = std::min(255, static_cast<int>(floor(brightness * closestValidIntersection.intersectedTriangle.colour.red)));
+            int greenComponent = std::min(255, static_cast<int>(floor(brightness * closestValidIntersection.intersectedTriangle.colour.green)));
+            int blueComponent = std::min(255, static_cast<int>(floor(brightness * closestValidIntersection.intersectedTriangle.colour.blue)));
 
-                // 保证颜色分量在有效范围内 [0, 255]
-                int redComponent = std::min(255, static_cast<int>(floor(brightness * closestValidIntersection.intersectedTriangle.colour.red)));
-                int greenComponent = std::min(255, static_cast<int>(floor(brightness * closestValidIntersection.intersectedTriangle.colour.green)));
-                int blueComponent = std::min(255, static_cast<int>(floor(brightness * closestValidIntersection.intersectedTriangle.colour.blue)));
 
-                // 组合颜色分量到一个整数中
+
+            //reflaction
+//light 可能需要变成负数
+           glm::vec3 reflectDirection = glm::reflect(lightDirection, closestValidIntersection.intersectedTriangle.normal);
+            float reflectBrightness = pow(glm::max(glm::dot(reflectDirection, rayDirection) ,0.0f ), 256);
+
+            redComponent = std::min(255, static_cast<int>(floor(reflectBrightness +redComponent )));
+            greenComponent = std::min(255, static_cast<int>(floor(reflectBrightness + greenComponent)));
+            blueComponent = std::min(255, static_cast<int>(floor(reflectBrightness + blueComponent)));
+
+
+                // 组合颜色分量到一个整数中aaaaaa
                 uint32_t thisColor = (255 << 24) +
                                      (redComponent << 16) +  // 红色分量
                                      (greenComponent << 8) +  // 绿色分量
