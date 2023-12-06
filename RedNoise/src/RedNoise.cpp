@@ -644,7 +644,7 @@ int main(int argc, char *argv[]) {
     DrawingWindow window = DrawingWindow(WIDTH, HEIGHT, false);
     SDL_Event event;
 
-    glm::vec3 lightPosition(0.0f, 2.5f, 2.0f);
+    glm::vec3 lightPosition(0.8f, 3.0f, 2.5f);
 
     std::vector<glm::vec3> lights;
 
@@ -655,11 +655,11 @@ int main(int argc, char *argv[]) {
 
     // 将obj打印出来
     std::vector<ModelTriangle> TDtriangles = loadModel(
-            "/Users/jekwen/Documents/大三上/CG/CG2023/RedNoise/src/cornell-box.obj",
+            "/Users/jekwen/Documents/大三上/CG/CG2023/RedNoise/src/sphere.obj",
             "/Users/jekwen/Documents/大三上/CG/CG2023/RedNoise/src/cornell-box.mtl" );
     colors = projectionTriangleColour(TDtriangles);
 
-    glm::vec3 cameraPosition = {0, 0, 16};
+    glm::vec3 cameraPosition = {0, -1, 20};
     glm::mat3 camaraOrientation(glm::vec3(1,0,0),
                               glm::vec3(0,1,0),
                               glm::vec3(0,0,1));
