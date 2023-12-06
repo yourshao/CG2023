@@ -167,7 +167,8 @@ RayTriangleIntersection getClosestValidIntersection(DrawingWindow &window, glm::
                +tuvDone.z *  (triangleDone.vertices[2] - triangleDone.vertices[0]);
     RayTriangleIntersection  closestValidIntersection(r, minDistance, triangleDone, indexDone);
 
-    std::cout << r.x << std::endl;
+
+
 
     return closestValidIntersection;
 
@@ -208,24 +209,37 @@ void drawByRay(DrawingWindow &window,glm::vec3& cameraPosition, std::vector<RayT
             thisColor = (255 << 24) + (closestValidIntersection.intersectedTriangle.colour.red << 16) +
                     (closestValidIntersection.intersectedTriangle.colour.green << 8) +
                     closestValidIntersection.intersectedTriangle.colour.blue;
-
             //计算摄像机到光线的方向
-
             glm::vec3 lightDirection = glm::normalize( closestValidIntersection.intersectionPoint - lightPosition);
-
             RayTriangleIntersection closestLightedIntersection = getClosestValidIntersection( window, lightPosition, lightDirection, rayTriangle, cameraOrientation);
-
             // 如果光线与物体之间没有遮挡，那么就画出这个像素
+            std::cout << closestLightedIntersection.distanceFromCamera << std::endl;
+            if (closestValidIntersection.triangleIndex == closestLightedIntersection.triangleIndex) {
+                float distance = closestLightedIntersection.distanceFromCamera;
+
+                float attenuation = 100.0f /(3* 3.14f * distance * distance) ; // 计算衰减
+                float distanceBrightness = attenuation; // 使用衰减作为亮度
 
 
-            if (closestValidIntersection.triangleIndex == closestLightedIntersection.triangleIndex ) {
+// 计算光线与法线的夹角
+                float dotProduct = glm::dot(closestValidIntersection.intersectedTriangle.normal, glm::normalize( lightPosition - closestValidIntersection.intersectionPoint));
+                float angelBrightness = dotProduct; // 使用夹角作为亮度
+                float brightness =  distanceBrightness* angelBrightness; // 综合考虑两种亮度
+
+
+                // 保证颜色分量在有效范围内 [0, 255]
+                int redComponent = std::min(255, static_cast<int>(floor(brightness * closestValidIntersection.intersectedTriangle.colour.red)));
+                int greenComponent = std::min(255, static_cast<int>(floor(brightness * closestValidIntersection.intersectedTriangle.colour.green)));
+                int blueComponent = std::min(255, static_cast<int>(floor(brightness * closestValidIntersection.intersectedTriangle.colour.blue)));
+
+                // 组合颜色分量到一个整数中
+                uint32_t thisColor = (255 << 24) +
+                                     (redComponent << 16) +  // 红色分量
+                                     (greenComponent << 8) +  // 绿色分量
+                                     blueComponent;  // 蓝色分量
+
                 window.setPixelColour(i, j, thisColor);
-
-            }//这个地方有隐患，大概是因为我定义的不是int
-
-//            if (closestValidIntersection.intersectionPoint == closestLightedIntersection.intersectionPoint) {
-//
-//            }
+            }
         }
     }
 
@@ -408,6 +422,7 @@ std::vector<ModelTriangle> loadModel(const std::string& objFilePath, const std::
             // 构建三角形并添加到数组中
             for (size_t i = 0; i < vertexIndices.size(); ++i) {
                 ModelTriangle triangle(vertices[vertexIndices[i].x - 1 ], vertices[vertexIndices[i].y -1 ], vertices[vertexIndices[i].z - 1], currentColor);
+                triangle.normal = glm::normalize(glm::cross(triangle.vertices[1] - triangle.vertices[0], triangle.vertices[2] - triangle.vertices[0]));
                 triangles.push_back(triangle);
             }
         } else if (type == "v") {
@@ -501,7 +516,7 @@ std::vector<CanvasTriangle> cameraOrbit(std::vector<RayTriangleIntersection> &tr
 }
 
 
-void handleEvent(SDL_Event event, DrawingWindow &window, std::vector<RayTriangleIntersection> &triangles, glm::vec3& cameraPosition, std::vector<ModelTriangle> &TDtriangles, glm::mat3& cameraOrientation, std::vector<Colour> &colors ) {
+void handleEvent(SDL_Event event, DrawingWindow &window, std::vector<RayTriangleIntersection> &triangles, glm::vec3& cameraPosition, std::vector<ModelTriangle> &TDtriangles, glm::mat3& cameraOrientation, std::vector<Colour> &colors, glm::vec3& lightPosition) {
     if (event.type == SDL_KEYDOWN) {
         if (event.key.keysym.sym == SDLK_LEFT) {
             cameraPosition.x -= 1;
@@ -537,6 +552,30 @@ void handleEvent(SDL_Event event, DrawingWindow &window, std::vector<RayTriangle
             triangles =  projectionTrianglePoint(TDtriangles, cameraPosition, cameraOrientation);
             std::cout << "DOWN" << std::endl;
         }
+
+       else if (event.key.keysym.sym == SDLK_i) {
+            lightPosition.y += 0.2;
+        }
+        else if (event.key.keysym.sym == SDLK_k)
+        {
+            lightPosition.y -= 0.2;
+        }
+        else if (event.key.keysym.sym == SDLK_j)
+        {
+            lightPosition.x -= 0.2;
+        }
+        else if (event.key.keysym.sym == SDLK_l)
+        {
+            lightPosition.x += 0.2;
+        }
+        else if(event.key.keysym.sym == SDLK_y)
+        {
+            lightPosition.z -= 0.2;
+        } else if(event.key.keysym.sym == SDLK_p)
+        {
+            lightPosition.z += 0.2;
+        }
+
 
         else if(event.key.keysym.sym == SDLK_w)
         {
@@ -598,7 +637,10 @@ int main(int argc, char *argv[]) {
     DrawingWindow window = DrawingWindow(WIDTH, HEIGHT, false);
     SDL_Event event;
 
-    glm::vec3 lightPosition(0.0f, 2.0f, 3.0f);
+    glm::vec3 lightPosition(0.0f, 2.5f, 2.0f);
+
+    std::vector<glm::vec3> lights;
+
 
     std::vector<RayTriangleIntersection> rayTriangles;
     std::vector<Colour> colors;
@@ -618,7 +660,7 @@ int main(int argc, char *argv[]) {
     rayTriangles =  projectionTrianglePoint(TDtriangles, cameraPosition, camaraOrientation);
 
     while (true) {
-        if (window.pollForInputEvents(event)) handleEvent(event, window, rayTriangles, cameraPosition, TDtriangles, camaraOrientation, colors);
+        if (window.pollForInputEvents(event)) handleEvent(event, window, rayTriangles, cameraPosition, TDtriangles, camaraOrientation, colors, lightPosition);
         window.clearPixels();
         drawByRay(window,cameraPosition, rayTriangles, camaraOrientation, lightPosition);
         window.renderFrame();
