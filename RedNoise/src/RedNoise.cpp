@@ -213,8 +213,8 @@ void drawByRay(DrawingWindow &window,glm::vec3& cameraPosition, std::vector<RayT
             glm::vec3 lightDirection = glm::normalize( closestValidIntersection.intersectionPoint - lightPosition);
             RayTriangleIntersection closestLightedIntersection = getClosestValidIntersection( window, lightPosition, lightDirection, rayTriangle, cameraOrientation);
             // 如果光线与物体之间没有遮挡，那么就画出这个像素
-            std::cout << closestLightedIntersection.distanceFromCamera << std::endl;
-            if (closestValidIntersection.triangleIndex == closestLightedIntersection.triangleIndex) {
+//            std::cout << closestLightedIntersection.distanceFromCamera << std::endl;
+//            if (closestValidIntersection.triangleIndex == closestLightedIntersection.triangleIndex) {
                 float distance = closestLightedIntersection.distanceFromCamera;
 
                 float attenuation = 100.0f /(3* 3.14f * distance * distance) ; // 计算衰减
@@ -225,6 +225,13 @@ void drawByRay(DrawingWindow &window,glm::vec3& cameraPosition, std::vector<RayT
                 float dotProduct = glm::dot(closestValidIntersection.intersectedTriangle.normal, glm::normalize( lightPosition - closestValidIntersection.intersectionPoint));
                 float angelBrightness = dotProduct; // 使用夹角作为亮度
                 float brightness =  distanceBrightness* angelBrightness; // 综合考虑两种亮度
+
+                if (brightness < 0.3) brightness = 0.3; // 亮度最小为0.3
+            if (closestValidIntersection.triangleIndex != closestLightedIntersection.triangleIndex) {
+                brightness = 0.2;
+                std::cout << brightness << std::endl;
+            }
+
 
 
                 // 保证颜色分量在有效范围内 [0, 255]
@@ -239,7 +246,7 @@ void drawByRay(DrawingWindow &window,glm::vec3& cameraPosition, std::vector<RayT
                                      blueComponent;  // 蓝色分量
 
                 window.setPixelColour(i, j, thisColor);
-            }
+//            }
         }
     }
 
