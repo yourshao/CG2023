@@ -109,22 +109,22 @@ bool isPointInTriangle(int x, int y, float x0, float y0, float x1, float y1, flo
 }
 
 
-glm::vec3  barycentric(CanvasTriangle triangle, int x, int y, std::vector<float> vertexIntensities ) {
-    glm::vec3 u = cross(glm::vec3(triangle.v2().x-triangle.v0().x, triangle.v1().x-triangle.v0().x, triangle.v0().x- x),
-                        glm::vec3(triangle.v2().y-triangle.v0().y, triangle.v1().y-triangle.v0().y, triangle.v0().y- y));
-    if (std::abs(u.z)<1){
-        glm::vec3 coefficientOfPoint({-1,1,1});
-        return glm::vec3(coefficientOfPoint.x * vertexIntensities[0],
-        coefficientOfPoint.y * vertexIntensities[1],
-        coefficientOfPoint.z * vertexIntensities[2]);
+glm::vec3  barycentric(RayTriangleIntersection closestValidIntersection){
+    glm::vec3 weight;
+    glm::vec3 v0 = closestValidIntersection.intersectedTriangle.vertices[1] - closestValidIntersection.intersectedTriangle.vertices[0];
+    glm::vec3 v1 = closestValidIntersection.intersectedTriangle.vertices[2] - closestValidIntersection.intersectedTriangle.vertices[0];
+    glm::vec3 v2 = closestValidIntersection.intersectionPoint - closestValidIntersection.intersectedTriangle.vertices[0];
+    float d00 = glm::dot(v0, v0);
+    float d01 = glm::dot(v0, v1);
+    float d11 = glm::dot(v1, v1);
+    float d20 = glm::dot(v2, v0);
+    float d21 = glm::dot(v2, v1);
+    float denom = d00 * d11 - d01 * d01;
+    weight[1] = (d11 * d20 - d01 * d21) / denom;
+    weight[2] = (d00 * d21 - d01 * d20) / denom;
+    weight[0] = 1.0f - weight[1] - weight[2];
+    return weight;
 
-    }
-    // 避免除以0的错误
-
-    glm::vec3 coefficientOfPoint(1.f-(u.x+u.y)/u.z, u.y/u.z, u.x/u.z);
-    return  glm::vec3(coefficientOfPoint.x * vertexIntensities[0],
-                      coefficientOfPoint.y * vertexIntensities[1],
-                      coefficientOfPoint.z * vertexIntensities[2]);
 }
 
 
@@ -246,54 +246,65 @@ void gouraud (DrawingWindow &window,glm::vec3& cameraPosition, std::vector<RayTr
 
                 std::vector <ModelTriangle> threeDtriangle;
                 threeDtriangle.push_back(closestValidIntersection.intersectedTriangle);
-                std::vector<RayTriangleIntersection> twoDtriangle = projectionTrianglePoint(threeDtriangle, cameraPosition, cameraOrientation);
 
-                glm::vec3 barycentricCoordinates = barycentric(closestValidIntersection.intersectedTriangle , x, y, vertexIntensities);
-//                glm::vec3 interpolatedIntensity = vertexIntensities[0] * barycentricCoordinates.x +
-//                                                  vertexIntensities[1] * barycentricCoordinates.y +
-//                                                  vertexIntensities[2] * barycentricCoordinates.z;
 
-                glm::vec3 color = barycentricCoordinates; // 使用插值后的光照强度作为颜色
-                uint32_t adjustedColor = (255 << 24) |
-                                         (static_cast<uint8_t>(color.r) << 16) |
-                                         (static_cast<uint8_t>(color.g) << 8) |
-                                         static_cast<uint8_t>(color.b);
+                glm::vec3 barycentricCoordinates = barycentric(closestValidIntersection);
+                float interpolatedIntensity = vertexIntensities[0] * barycentricCoordinates.x+
+                        vertexIntensities[1] * barycentricCoordinates.y +
+                        vertexIntensities[2] * barycentricCoordinates.z;
+
+                // 使用插值后的光照强度作为颜色
+                int redComponent = std::min(255, static_cast<int>(floor(interpolatedIntensity * closestValidIntersection.intersectedTriangle.colour.red)));
+                int greenComponent = std::min(255, static_cast<int>(floor(interpolatedIntensity * closestValidIntersection.intersectedTriangle.colour.green)));
+                int blueComponent = std::min(255, static_cast<int>(floor(interpolatedIntensity * closestValidIntersection.intersectedTriangle.colour.blue)));
+                uint32_t adjustedColor = (255 << 24) +
+                                (redComponent << 16) +  // 红色分量
+                                (greenComponent << 8) +  // 绿色分量
+                                blueComponent;  // 蓝色分量
 
                 window.setPixelColour(x, y, adjustedColor);
             }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
             }
-
-
-
 
         }
     }
 
 
-}
-
-
-
-
-
-
-
-
-
+//    void phong(DrawingWindow &window,glm::vec3& cameraPosition, std::vector<RayTriangleIntersection> rayTriangle, glm::mat3& cameraOrientation, glm::vec3 lightPosition){
+//        for (int x = 0; x < WIDTH; x++) {
+//            for (int y = 0; y < HEIGHT; y++) {
+//
+//                glm::vec3 rayDirection = computeRayDirection(cameraPosition, x, y, cameraOrientation, 14);
+//                RayTriangleIntersection closestValidIntersection = getClosestValidIntersection(window, cameraPosition, rayDirection, rayTriangle, cameraOrientation);
+//
+//                if (closestValidIntersection.distanceFromCamera != std::numeric_limits<float>::infinity()) {
+//
+//                    std::vector<float> vertexIntensities;
+//
+//                    for (const auto& vertex : closestValidIntersection.intersectedTriangle.vertices) {
+//                        int i = 0;
+//                        glm::vec3 lightDirection = glm::normalize( vertex - lightPosition);
+//                        RayTriangleIntersection lightedIntersection = getClosestValidIntersection(window, lightPosition, lightDirection, rayTriangle, cameraOrientation);
+//
+//                        vertexIntensities.push_back(computeVertexIntensity(lightedIntersection, lightPosition));
+//                    }
+//
+//                    // 使用重心坐标进行插值
+//
+//                    std::vector <ModelTriangle> threeDtriangle;
+//                    threeDtriangle.push_back(closestValidIntersection.intersectedTriangle);
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
 
 
 
@@ -778,7 +789,7 @@ int main(int argc, char *argv[]) {
     while (true) {
         if (window.pollForInputEvents(event)) handleEvent(event, window, rayTriangles, cameraPosition, TDtriangles, camaraOrientation, colors, lightPosition);
         window.clearPixels();
-        drawByRay(window,cameraPosition, rayTriangles, camaraOrientation, lightPosition);
+        gouraud(window,cameraPosition, rayTriangles, camaraOrientation, lightPosition);
         window.renderFrame();
     }
     return 0;
