@@ -227,7 +227,7 @@ glm::vec3 computeRayDirection(const glm::vec3& cameraPosition, int x, int y, con
 std::vector<glm::vec3>getEachVertexBrightness( DrawingWindow &window, std::vector<RayTriangleIntersection> rayTriangle, glm::vec3  lightPosition, glm::vec3 cameraPosition, glm::mat3& cameraOrientation){
    std::vector<glm::vec3>resultBrightness;
     for (const auto&  triangle : rayTriangle){
-        float brightnessList[3];
+        float brightnessList[3] = {0, 0, 0};
         int i = 0;
         for (const auto& vertex : triangle.intersectedTriangle.vertices) {
 
@@ -242,10 +242,10 @@ std::vector<glm::vec3>getEachVertexBrightness( DrawingWindow &window, std::vecto
                                                                                              cameraOrientation);
             // 如果光线与物体之间没有遮挡，那么就画出这个像素
 //            std::cout << closestLightedIntersection.distanceFromCamera << std::endl;
-//            if (closestValidIntersection.triangleIndex == closestLightedIntersection.triangleIndex) {
-            float distance = closestLightedIntersection.distanceFromCamera;
-            float attenuation = 100.0f / (3 * 3.14f * distance * distance); // 计算衰减
-            float distanceBrightness = attenuation; // 使用衰减作为亮度
+            if (closestValidIntersection.triangleIndex == closestLightedIntersection.triangleIndex) {
+                float distance = closestLightedIntersection.distanceFromCamera;
+                float attenuation = 100.0f / (3 * 3.14f * distance * distance); // 计算衰减
+                float distanceBrightness = attenuation; // 使用衰减作为亮度
 
 
 // 计算光线与法线的夹角
@@ -255,8 +255,15 @@ std::vector<glm::vec3>getEachVertexBrightness( DrawingWindow &window, std::vecto
             float brightness = distanceBrightness * angelBrightness; // 综合考虑两种亮度
             if (brightness < 0.3) brightness = 0.3; // 亮度最小为0.3
 
+            glm::vec3 reflectDirection = glm::reflect(lightDirection, closestValidIntersection.intersectedTriangle.normal);
+            float reflectBrightness = pow(glm::max(glm::dot(reflectDirection, rayDirection) ,0.0f ), 256);
+
+            brightness = brightness + reflectBrightness;
+
             brightnessList[i] = brightness;
-            i++;
+                i++;
+
+             }
         }
             resultBrightness.push_back(glm::vec3(brightnessList[0], brightnessList[1], brightnessList[2]));
 
@@ -282,9 +289,9 @@ void gouraud (DrawingWindow &window,glm::vec3& cameraPosition, std::vector<RayTr
 
 
             glm::vec3 barycentricCoordinates = barycentric(closestValidIntersection);
-            float finalBrightness = brightness[0] * barycentricCoordinates.x+
-                    brightness[1] * barycentricCoordinates.y +
-                    brightness[2] * barycentricCoordinates.z;
+            float finalBrightness = brightness[0] * barycentricCoordinates.z+
+                    brightness[1] * barycentricCoordinates.x +
+                    brightness[2] * barycentricCoordinates.y;
 
 
 
