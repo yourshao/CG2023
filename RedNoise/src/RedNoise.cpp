@@ -157,7 +157,6 @@ RayTriangleIntersection getClosestValidIntersection(DrawingWindow &window, glm::
     int indexDone = 0;
 
     for (const RayTriangleIntersection& triangle : rayTriangles) {
-        index++;
         glm::vec3 e0 = triangle.intersectedTriangle.vertices[1] - triangle.intersectedTriangle.vertices[0];
         glm::vec3 e1 = triangle.intersectedTriangle.vertices[2] - triangle.intersectedTriangle.vertices[0];
         glm::vec3 SPVector = cameraPosition - triangle.intersectedTriangle.vertices[0];
@@ -173,6 +172,8 @@ RayTriangleIntersection getClosestValidIntersection(DrawingWindow &window, glm::
                 indexDone = index;
             }
         }
+        index++;
+
     }
     glm::vec3 r =  triangleDone.vertices[0] + tuvDone.y * (triangleDone.vertices[1] - triangleDone.vertices[0])
                +tuvDone.z *  (triangleDone.vertices[2] - triangleDone.vertices[0]);
@@ -208,62 +209,148 @@ glm::vec3 computeRayDirection(const glm::vec3& cameraPosition, int x, int y, con
 }
 
 
-float computeVertexIntensity(RayTriangleIntersection lightedIntersection, glm::vec3  lightPosition){
-    float distance = lightedIntersection.distanceFromCamera;
-    float attenuation = 100.0f /(3* 3.14f * distance * distance) ; // 计算衰减
-    float distanceBrightness = attenuation; // 使用衰减作为亮度
+//float computeVertexIntensity(RayTriangleIntersection lightedIntersection, glm::vec3  lightPosition){
+//    float distance = lightedIntersection.distanceFromCamera;
+//    float attenuation = 100.0f /(3* 3.14f * distance * distance) ; // 计算衰减
+//    float distanceBrightness = attenuation; // 使用衰减作为亮度
+//
+//// 计算光线与法线的夹角
+//    float dotProduct = glm::dot(lightedIntersection.intersectedTriangle.normal, glm::normalize( lightPosition - lightedIntersection.intersectionPoint));
+//    float angelBrightness = dotProduct; // 使用夹角作为亮度
+//    float brightness =  distanceBrightness* angelBrightness; // 综合考虑两种亮度
+//    if (brightness < 0.3) brightness = 0.3; // 亮度最小为0.3
+//    return brightness;
+//}
+
+
+
+std::vector<glm::vec3>getEachVertexBrightness( DrawingWindow &window, std::vector<RayTriangleIntersection> rayTriangle, glm::vec3  lightPosition, glm::vec3 cameraPosition, glm::mat3& cameraOrientation){
+   std::vector<glm::vec3>resultBrightness;
+    for (const auto&  triangle : rayTriangle){
+        float brightnessList[3];
+        int i = 0;
+        for (const auto& vertex : triangle.intersectedTriangle.vertices) {
+
+            glm::vec3 rayDirection = glm::normalize(vertex - cameraPosition);
+            RayTriangleIntersection closestValidIntersection = getClosestValidIntersection(window, cameraPosition,
+                                                                                           rayDirection, rayTriangle,
+                                                                                           cameraOrientation);
+            glm::vec3 lightDirection = glm::normalize(closestValidIntersection.intersectionPoint - lightPosition);
+            RayTriangleIntersection closestLightedIntersection = getClosestValidIntersection(window, lightPosition,
+                                                                                             lightDirection,
+                                                                                             rayTriangle,
+                                                                                             cameraOrientation);
+            // 如果光线与物体之间没有遮挡，那么就画出这个像素
+//            std::cout << closestLightedIntersection.distanceFromCamera << std::endl;
+//            if (closestValidIntersection.triangleIndex == closestLightedIntersection.triangleIndex) {
+            float distance = closestLightedIntersection.distanceFromCamera;
+            float attenuation = 100.0f / (3 * 3.14f * distance * distance); // 计算衰减
+            float distanceBrightness = attenuation; // 使用衰减作为亮度
+
 
 // 计算光线与法线的夹角
-    float dotProduct = glm::dot(lightedIntersection.intersectedTriangle.normal, glm::normalize( lightPosition - lightedIntersection.intersectionPoint));
-    float angelBrightness = dotProduct; // 使用夹角作为亮度
-    float brightness =  distanceBrightness* angelBrightness; // 综合考虑两种亮度
-    if (brightness < 0.3) brightness = 0.3; // 亮度最小为0.3
-    return brightness;
+            float dotProduct = glm::dot(closestValidIntersection.intersectedTriangle.normal,
+                                        glm::normalize(lightPosition - closestValidIntersection.intersectionPoint));
+            float angelBrightness = dotProduct; // 使用夹角作为亮度
+            float brightness = distanceBrightness * angelBrightness; // 综合考虑两种亮度
+            if (brightness < 0.3) brightness = 0.3; // 亮度最小为0.3
+
+            brightnessList[i] = brightness;
+            i++;
+        }
+            resultBrightness.push_back(glm::vec3(brightnessList[0], brightnessList[1], brightnessList[2]));
+
+    }
+
+    return resultBrightness;
 }
+
 
 
 void gouraud (DrawingWindow &window,glm::vec3& cameraPosition, std::vector<RayTriangleIntersection> rayTriangle, glm::mat3& cameraOrientation, glm::vec3 lightPosition){
 
+    std::vector<glm::vec3>eachVertexBrightness = getEachVertexBrightness(window, rayTriangle, lightPosition, cameraPosition, cameraOrientation);
     for (int x = 0; x < WIDTH; x++) {
         for (int y = 0; y < HEIGHT; y++) {
 
             glm::vec3 rayDirection = computeRayDirection(cameraPosition, x, y, cameraOrientation, 14);
             RayTriangleIntersection closestValidIntersection = getClosestValidIntersection(window, cameraPosition, rayDirection, rayTriangle, cameraOrientation);
 
-            if (closestValidIntersection.distanceFromCamera != std::numeric_limits<float>::infinity()) {
-
-                std::vector<float> vertexIntensities;
-
-                for (const auto& vertex : closestValidIntersection.intersectedTriangle.vertices) {
-                   int i = 0;
-                    glm::vec3 lightDirection = glm::normalize( vertex - lightPosition);
-                    RayTriangleIntersection lightedIntersection = getClosestValidIntersection(window, lightPosition, lightDirection, rayTriangle, cameraOrientation);
-
-                    vertexIntensities.push_back(computeVertexIntensity(lightedIntersection, lightPosition));
-                }
-
-                // 使用重心坐标进行插值
-
-                std::vector <ModelTriangle> threeDtriangle;
-                threeDtriangle.push_back(closestValidIntersection.intersectedTriangle);
+           glm::vec3 brightness = eachVertexBrightness.at(closestValidIntersection.triangleIndex);
+            // 使用重心坐标进行插值
+           std::cout << closestValidIntersection.triangleIndex << std::endl;
 
 
-                glm::vec3 barycentricCoordinates = barycentric(closestValidIntersection);
-                float interpolatedIntensity = vertexIntensities[0] * barycentricCoordinates.x+
-                        vertexIntensities[1] * barycentricCoordinates.y +
-                        vertexIntensities[2] * barycentricCoordinates.z;
+            glm::vec3 barycentricCoordinates = barycentric(closestValidIntersection);
+            float finalBrightness = brightness[0] * barycentricCoordinates.x+
+                    brightness[1] * barycentricCoordinates.y +
+                    brightness[2] * barycentricCoordinates.z;
 
-                // 使用插值后的光照强度作为颜色
-                int redComponent = std::min(255, static_cast<int>(floor(interpolatedIntensity * closestValidIntersection.intersectedTriangle.colour.red)));
-                int greenComponent = std::min(255, static_cast<int>(floor(interpolatedIntensity * closestValidIntersection.intersectedTriangle.colour.green)));
-                int blueComponent = std::min(255, static_cast<int>(floor(interpolatedIntensity * closestValidIntersection.intersectedTriangle.colour.blue)));
+
+
+            int redComponent = std::min(255, static_cast<int>(floor(finalBrightness * closestValidIntersection.intersectedTriangle.colour.red)));
+                int greenComponent = std::min(255, static_cast<int>(floor(finalBrightness * closestValidIntersection.intersectedTriangle.colour.green)));
+                int blueComponent = std::min(255, static_cast<int>(floor(finalBrightness * closestValidIntersection.intersectedTriangle.colour.blue)));
+
+//                redComponent = std::max(0, redComponent);
+//                greenComponent = std::max(0, greenComponent);
+//                blueComponent = std::max(0, blueComponent);
+
+
+
                 uint32_t adjustedColor = (255 << 24) +
                                 (redComponent << 16) +  // 红色分量
                                 (greenComponent << 8) +  // 绿色分量
                                 blueComponent;  // 蓝色分量
 
                 window.setPixelColour(x, y, adjustedColor);
-            }
+
+
+//            if (closestValidIntersection.distanceFromCamera != std::numeric_limits<float>::infinity()) {
+//
+//                std::vector<float> vertexIntensities;
+//
+//                for (const auto& vertex : closestValidIntersection.intersectedTriangle.vertices) {
+//                   int i = 0;
+//                    glm::vec3 lightDirection = glm::normalize( vertex - lightPosition);
+//                    RayTriangleIntersection lightedIntersection = getClosestValidIntersection(window, lightPosition, lightDirection, rayTriangle, cameraOrientation);
+//                    vertexIntensities.push_back(computeVertexIntensity(lightedIntersection, lightPosition));
+//
+//
+//                }
+//
+//                // 使用重心坐标进行插值
+//
+//                std::vector <ModelTriangle> threeDtriangle;
+//                threeDtriangle.push_back(closestValidIntersection.intersectedTriangle);
+//
+//
+//
+//                glm::vec3 barycentricCoordinates = barycentric(closestValidIntersection);
+//                float interpolatedIntensity = vertexIntensities[0] * barycentricCoordinates.x+
+//                        vertexIntensities[1] * barycentricCoordinates.y +
+//                        vertexIntensities[2] * barycentricCoordinates.z;
+//                float brightness =  distanceBrightness* angelBrightness * interpolatedIntensity; // 综合考虑三种亮度
+//
+//
+//                // 使用插值后的光照强度作为颜色
+//                int redComponent = std::min(255, static_cast<int>(floor(brightness * closestValidIntersection.intersectedTriangle.colour.red)));
+//                int greenComponent = std::min(255, static_cast<int>(floor(brightness * closestValidIntersection.intersectedTriangle.colour.green)));
+//                int blueComponent = std::min(255, static_cast<int>(floor(brightness * closestValidIntersection.intersectedTriangle.colour.blue)));
+//
+////                redComponent = std::max(0, redComponent);
+////                greenComponent = std::max(0, greenComponent);
+////                blueComponent = std::max(0, blueComponent);
+//
+//
+//
+//                uint32_t adjustedColor = (255 << 24) +
+//                                (redComponent << 16) +  // 红色分量
+//                                (greenComponent << 8) +  // 绿色分量
+//                                blueComponent;  // 蓝色分量
+//
+//                window.setPixelColour(x, y, adjustedColor);
+//            }
 
             }
 
