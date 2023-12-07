@@ -196,67 +196,109 @@ glm::vec3 computeRayDirection(const glm::vec3& cameraPosition, int x, int y, con
     return rayDirection;
 }
 
+std::vector<glm::vec3> generateLightSources(int numberOfLights, const glm::vec3& areaCenter, float areaRadius) {
+    std::vector<glm::vec3> lights;
+    for (int i = 0; i < numberOfLights; ++i) {
+        // 生成随机位置
+        float x = areaCenter.x + static_cast<float>(rand()) / RAND_MAX * areaRadius - areaRadius / 2.0f;
+        float y = areaCenter.y + static_cast<float>(rand()) / RAND_MAX * areaRadius - areaRadius / 2.0f;
+        float z = areaCenter.z + static_cast<float>(rand()) / RAND_MAX * areaRadius - areaRadius / 2.0f;
 
-void drawByRay(DrawingWindow &window,glm::vec3& cameraPosition, std::vector<RayTriangleIntersection> rayTriangle, glm::mat3& cameraOrientation, glm::vec3 lightPosition){
+
+       glm::vec3 lightPosition = glm::vec3(x, y, z);
+
+
+        lights.push_back(lightPosition);
+    }
+    return lights;
+}
+
+void drawByRay(DrawingWindow &window,glm::vec3& cameraPosition, std::vector<RayTriangleIntersection> rayTriangle, glm::mat3& cameraOrientation,  std::vector<glm::vec3>lightPositions){
     uint32_t thisColor = (255 << 24) + (255 << 16) + (255 << 8) + 255;
 
     // Reset zBuffer for the new frame
     window.clearPixels();
     for (int i = 0; i < WIDTH; ++i) {
         for (int j = 0; j < HEIGHT; ++j) {
-            glm::vec3  rayDirection = computeRayDirection(cameraPosition, i, j, cameraOrientation,14 ); // 需要实现这个函数
-            RayTriangleIntersection  closestValidIntersection = getClosestValidIntersection(  cameraPosition, rayDirection, rayTriangle, cameraOrientation);
-            thisColor = (255 << 24) + (closestValidIntersection.intersectedTriangle.colour.red << 16) +
-                    (closestValidIntersection.intersectedTriangle.colour.green << 8) +
-                    closestValidIntersection.intersectedTriangle.colour.blue;
-            //计算摄像机到光线的方向
-            glm::vec3 lightDirection = glm::normalize( closestValidIntersection.intersectionPoint - lightPosition);
-            RayTriangleIntersection closestLightedIntersection = getClosestValidIntersection(  lightPosition, lightDirection, rayTriangle, cameraOrientation);
-            // 如果光线与物体之间没有遮挡，那么就画出这个像素
+            glm::vec3 rayDirection = computeRayDirection(cameraPosition, i, j, cameraOrientation, 14); // 需要实现这个函数
+            RayTriangleIntersection closestValidIntersection = getClosestValidIntersection(cameraPosition,
+                                                                                           rayDirection,
+                                                                                           rayTriangle,
+                                                                                           cameraOrientation);
+
+           float finalBrightness = 0.0f;
+           float finalReflectBrightness = 0.0f;
+
+            for(const glm::vec3  lightPosition : lightPositions) {
+
+                thisColor = (255 << 24) + (closestValidIntersection.intersectedTriangle.colour.red << 16) +
+                            (closestValidIntersection.intersectedTriangle.colour.green << 8) +
+                            closestValidIntersection.intersectedTriangle.colour.blue;
+                //计算摄像机到光线的方向
+                glm::vec3 lightDirection = glm::normalize(closestValidIntersection.intersectionPoint - lightPosition);
+                RayTriangleIntersection closestLightedIntersection = getClosestValidIntersection(lightPosition,
+                                                                                                 lightDirection,
+                                                                                                 rayTriangle,
+                                                                                                 cameraOrientation);
+                // 如果光线与物体之间没有遮挡，那么就画出这个像素
 //            std::cout << closestLightedIntersection.distanceFromCamera << std::endl;
 //            if (closestValidIntersection.triangleIndex == closestLightedIntersection.triangleIndex) {
                 float distance = closestLightedIntersection.distanceFromCamera;
 
-                float attenuation = 100.0f /(3* 3.14f * distance * distance) ; // 计算衰减
+                float attenuation = 100.0f / (3 * 3.14f * distance * distance); // 计算衰减
                 float distanceBrightness = attenuation; // 使用衰减作为亮度
 
 // 计算光线与法线的夹角
-                float dotProduct = glm::dot(closestValidIntersection.intersectedTriangle.normal, glm::normalize( lightPosition - closestValidIntersection.intersectionPoint));
+                float dotProduct = glm::dot(closestValidIntersection.intersectedTriangle.normal,
+                                            glm::normalize(lightPosition - closestValidIntersection.intersectionPoint));
                 float angelBrightness = dotProduct; // 使用夹角作为亮度
-                float brightness =  distanceBrightness* angelBrightness; // 综合考虑两种亮度
+                float brightness = distanceBrightness * angelBrightness; // 综合考虑两种亮度
 
                 if (brightness < 0.3) brightness = 0.3; // 亮度最小为0.3
-            if (closestValidIntersection.triangleIndex != closestLightedIntersection.triangleIndex) {
-                brightness = 0.2;
-                std::cout << brightness << std::endl;
+                if (closestValidIntersection.triangleIndex != closestLightedIntersection.triangleIndex) {
+                    brightness = 0.2;
+
+                }
+                finalBrightness += brightness;
+
+
+                glm::vec3 reflectDirection = glm::reflect(lightDirection,
+                                                          closestValidIntersection.intersectedTriangle.normal);
+                float reflectBrightness = pow(glm::max(glm::dot(reflectDirection, rayDirection), 0.0f), 256);
+                finalReflectBrightness += reflectBrightness;
+
+
             }
 
-
+            finalBrightness = finalBrightness / lightPositions.size();
+            finalReflectBrightness = finalReflectBrightness / lightPositions.size();
             // 保证颜色分量在有效范围内 [0, 255]
-            int redComponent = std::min(255, static_cast<int>(floor(brightness * closestValidIntersection.intersectedTriangle.colour.red)));
-            int greenComponent = std::min(255, static_cast<int>(floor(brightness * closestValidIntersection.intersectedTriangle.colour.green)));
-            int blueComponent = std::min(255, static_cast<int>(floor(brightness * closestValidIntersection.intersectedTriangle.colour.blue)));
+            int redComponent = std::min(255, static_cast<int>(floor(
+                    finalBrightness * closestValidIntersection.intersectedTriangle.colour.red)));
+            int greenComponent = std::min(255, static_cast<int>(floor(
+                    finalBrightness * closestValidIntersection.intersectedTriangle.colour.green)));
+            int blueComponent = std::min(255, static_cast<int>(floor(
+                    finalBrightness * closestValidIntersection.intersectedTriangle.colour.blue)));
 
 
 
             //reflaction
 //light 可能需要变成负数
-           glm::vec3 reflectDirection = glm::reflect(lightDirection, closestValidIntersection.intersectedTriangle.normal);
-            float reflectBrightness = pow(glm::max(glm::dot(reflectDirection, rayDirection) ,0.0f ), 256);
 
-            redComponent = std::min(255, static_cast<int>(floor(reflectBrightness +redComponent )));
-            greenComponent = std::min(255, static_cast<int>(floor(reflectBrightness + greenComponent)));
-            blueComponent = std::min(255, static_cast<int>(floor(reflectBrightness + blueComponent)));
+            redComponent = std::min(255, static_cast<int>(floor(finalReflectBrightness + redComponent)));
+            greenComponent = std::min(255, static_cast<int>(floor(finalReflectBrightness + greenComponent)));
+            blueComponent = std::min(255, static_cast<int>(floor(finalReflectBrightness + blueComponent)));
 
 
-                // 组合颜色分量到一个整数中aaaaaa
-                uint32_t thisColor = (255 << 24) +
-                                     (redComponent << 16) +  // 红色分量
-                                     (greenComponent << 8) +  // 绿色分量
-                                     blueComponent;  // 蓝色分量
+            // 组合颜色分量到一个整数中aaaaaa
+            uint32_t thisColor = (255 << 24) +
+                                 (redComponent << 16) +  // 红色分量
+                                 (greenComponent << 8) +  // 绿色分量
+                                 blueComponent;  // 蓝色分量
 
-                window.setPixelColour(i, j, thisColor);
+            window.setPixelColour(i, j, thisColor);
 //            }
+
         }
     }
 
@@ -526,7 +568,7 @@ std::vector<CanvasTriangle> cameraOrbit(std::vector<RayTriangleIntersection> &tr
 
         triangles =  projectionTrianglePoint(TDtriangles, cameraPosition, cameraOrientation);
         window.clearPixels();
-        drawByRay(window, cameraPosition, triangles, cameraOrientation, glm::vec3(0.0f, 0.4f, 0.0f));
+//        drawByRay(window, cameraPosition, triangles, cameraOrientation, glm::vec3(0.0f, 0.4f, 0.0f));
         window.renderFrame();
 
     }
@@ -655,6 +697,7 @@ int main(int argc, char *argv[]) {
     SDL_Event event;
 
     glm::vec3 lightPosition(0.0f, 2.5f, 2.0f);
+    std::vector<glm::vec3>lightPositions = generateLightSources(80, lightPosition, 1.0f);
 
     std::vector<glm::vec3> lights;
 
@@ -679,7 +722,7 @@ int main(int argc, char *argv[]) {
     while (true) {
         if (window.pollForInputEvents(event)) handleEvent(event, window, rayTriangles, cameraPosition, TDtriangles, camaraOrientation, colors, lightPosition);
         window.clearPixels();
-        drawByRay(window,cameraPosition, rayTriangles, camaraOrientation, lightPosition);
+        drawByRay(window,cameraPosition, rayTriangles, camaraOrientation, lightPositions);
         window.renderFrame();
     }
     return 0;
