@@ -1,7 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
+<<<<<<< HEAD
   <component name="CMakeWorkspace" PROJECT_DIR="$PROJECT_DIR$/RedNoise">
     <contentRoot DIR="$PROJECT_DIR$" />
+=======
+  <component name="CMakeWorkspace">
+    <contentRoot DIR="$PROJECT_DIR$/RedNoise" />
+>>>>>>> 07b75158eb04fc0a30492d2fc54e69866a3703f0
   </component>
   <component name="ExternalStorageConfigurationManager" enabled="true" />
   <component name="MakefileSettings">
