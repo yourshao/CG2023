@@ -12,8 +12,8 @@
 #include <sstream>
 #include <fstream>
 #include <math.h>
-#define WIDTH 320*2
-#define HEIGHT 240*2
+#define WIDTH 320
+#define HEIGHT 240
 
 
 
@@ -502,6 +502,12 @@ int main(int argc, char *argv[]) {
     glm::mat3 camaraOrientation(glm::vec3(1,0,0),
                               glm::vec3(0,1,0),
                               glm::vec3(0,0,1));
+//    glm::mat3 rotationMatrix ( glm::vec3(cos(acos(-1.0)), 0.0, sin(acos(-1.0))),
+//                               glm::vec3(0.0, 1.0, 0.0),
+//                               glm::vec3(-sin(acos(-1.0)), 0.0, cos(acos(-1.0)))
+//    );
+
+    camaraOrientation = rotationMatrix * camaraOrientation;
 
     triangles =  projectionTrianglePoint(TDtriangles, cameraPosition, camaraOrientation);
     while (true) {
